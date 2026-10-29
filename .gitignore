@@ -1,0 +1,54 @@
+# ── Python / Backend ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables — NEVER commit actual secrets
+.env
+.env.local
+.env.*.local
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+*.local
+.pnpm-store/
+
+# ── Repository Analysis Workspaces ───────────────────────────────────────────
+# Temporary directories created during repository ingestion must never be committed.
+tmp/
+workspace/
+uploads/
+*.zip
+
+# ── Editor / OS ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+*.sublime-workspace
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+

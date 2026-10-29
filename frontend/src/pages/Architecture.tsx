@@ -13,9 +13,9 @@ export function Architecture() {
       <div className="card min-h-96">
         <EmptyState
           icon={Network}
-          title="No architecture data"
-          description="Analyse a repository first. The architecture map will display identified components, services, and data-flow edges."
-          badge="Requires Milestone 2 analysis engine"
+          title="Interactive Architecture Map"
+          description="Milestone 2 code inventory is complete. In Milestone 3, React Flow will render identified microservices, routers, data pipelines, and external integrations."
+          badge="Queued for Milestone 3"
         />
       </div>
     </div>

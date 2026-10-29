@@ -26,27 +26,27 @@ _CAPABILITIES: list[Capability] = [
         name="GitHub Repository Ingestion",
         description=(
             "Clone a public GitHub repository into a secure temporary workspace "
-            "for analysis. ZIP path-traversal protection is applied."
+            "using single-branch shallow cloning with hooks disabled."
         ),
-        status="planned",
+        status="implemented",
     ),
     Capability(
         id="zip_ingest",
         name="ZIP Archive Ingestion",
         description=(
             "Accept an uploaded ZIP archive, validate file type and size, "
-            "and extract it safely into a temporary workspace."
+            "and extract it safely with Zip-Slip path-traversal protection."
         ),
-        status="planned",
+        status="implemented",
     ),
     Capability(
         id="repo_inventory",
         name="Repository Inventory",
         description=(
             "Identify languages, frameworks, manifests, entry points, routes, "
-            "dependencies, and infrastructure configuration files."
+            "dependencies, database access, authentication, and infrastructure."
         ),
-        status="planned",
+        status="implemented",
     ),
     Capability(
         id="architecture_model",

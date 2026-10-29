@@ -1,5 +1,5 @@
 import { useState, useRef, type ChangeEvent, type FormEvent } from 'react'
-import { Github, Upload, FolderOpen, Search, AlertCircle, Info } from 'lucide-react'
+import { Github, Upload, FolderOpen, Search, AlertCircle, Loader2 } from 'lucide-react'
 import type { InputMode } from '../types'
 
 const GITHUB_URL_RE =
@@ -9,33 +9,41 @@ function isValidGitHubUrl(url: string): boolean {
   return GITHUB_URL_RE.test(url.trim())
 }
 
-export function RepoInputPanel() {
+interface RepoInputPanelProps {
+  isAnalyzing: boolean
+  onAnalyzeGithub: (url: string) => Promise<void>
+  onAnalyzeZip: (file: File) => Promise<void>
+  errorMessage?: string | null
+}
+
+export function RepoInputPanel({
+  isAnalyzing,
+  onAnalyzeGithub,
+  onAnalyzeZip,
+  errorMessage,
+}: RepoInputPanelProps) {
   const [mode, setMode] = useState<InputMode>('github')
   const [githubUrl, setGithubUrl] = useState('')
   const [zipFile, setZipFile] = useState<File | null>(null)
-  const [urlError, setUrlError] = useState<string | null>(null)
-  const [zipError, setZipError] = useState<string | null>(null)
-  const [submitted, setSubmitted] = useState(false)
+  const [validationError, setValidationError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleUrlChange(e: ChangeEvent<HTMLInputElement>) {
     setGithubUrl(e.target.value)
-    setUrlError(null)
-    setSubmitted(false)
+    setValidationError(null)
   }
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null
-    setZipError(null)
-    setSubmitted(false)
+    setValidationError(null)
     if (file) {
-      if (!file.name.endsWith('.zip')) {
-        setZipError('Only .zip archives are accepted.')
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        setValidationError('Only .zip archives are accepted.')
         setZipFile(null)
         return
       }
       if (file.size > 52_428_800) {
-        setZipError('File exceeds the 50 MiB size limit.')
+        setValidationError('File exceeds the 50 MiB size limit.')
         setZipFile(null)
         return
       }
@@ -45,29 +53,32 @@ export function RepoInputPanel() {
     }
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (isAnalyzing) return
 
     if (mode === 'github') {
       if (!githubUrl.trim()) {
-        setUrlError('Please enter a GitHub repository URL.')
+        setValidationError('Please enter a GitHub repository URL.')
         return
       }
       if (!isValidGitHubUrl(githubUrl)) {
-        setUrlError(
+        setValidationError(
           'Enter a valid GitHub URL, e.g. https://github.com/owner/repo'
         )
         return
       }
+      await onAnalyzeGithub(githubUrl.trim())
     } else {
       if (!zipFile) {
-        setZipError('Please select a ZIP archive to upload.')
+        setValidationError('Please select a ZIP archive to upload.')
         return
       }
+      await onAnalyzeZip(zipFile)
     }
-
-    setSubmitted(true)
   }
+
+  const activeError = validationError || errorMessage
 
   return (
     <div className="card">
@@ -84,10 +95,11 @@ export function RepoInputPanel() {
         <button
           type="button"
           role="tab"
+          disabled={isAnalyzing}
           aria-selected={mode === 'github'}
           onClick={() => {
             setMode('github')
-            setSubmitted(false)
+            setValidationError(null)
           }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             mode === 'github'
@@ -101,10 +113,11 @@ export function RepoInputPanel() {
         <button
           type="button"
           role="tab"
+          disabled={isAnalyzing}
           aria-selected={mode === 'zip'}
           onClick={() => {
             setMode('zip')
-            setSubmitted(false)
+            setValidationError(null)
           }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             mode === 'zip'
@@ -130,19 +143,13 @@ export function RepoInputPanel() {
               <input
                 id="github-url"
                 type="url"
+                disabled={isAnalyzing}
                 className="input-base"
                 placeholder="https://github.com/owner/repository"
                 value={githubUrl}
                 onChange={handleUrlChange}
-                aria-describedby={urlError ? 'url-error' : undefined}
-                aria-invalid={!!urlError}
+                aria-invalid={!!activeError}
               />
-              {urlError && (
-                <p id="url-error" className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400" role="alert">
-                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                  {urlError}
-                </p>
-              )}
             </div>
           </div>
         ) : (
@@ -153,12 +160,14 @@ export function RepoInputPanel() {
               </label>
               <div
                 className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
+                  isAnalyzing ? 'opacity-50 pointer-events-none' : ''
+                } ${
                   zipFile
                     ? 'border-brand-500 bg-brand-500/5'
                     : 'border-surface-500 hover:border-brand-600 hover:bg-surface-700/50'
                 }`}
-                onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                onClick={() => !isAnalyzing && fileInputRef.current?.click()}
+                onKeyDown={(e) => e.key === 'Enter' && !isAnalyzing && fileInputRef.current?.click()}
                 tabIndex={0}
                 role="button"
                 aria-label="Select ZIP file"
@@ -167,6 +176,7 @@ export function RepoInputPanel() {
                   ref={fileInputRef}
                   type="file"
                   accept=".zip"
+                  disabled={isAnalyzing}
                   className="sr-only"
                   onChange={handleFileChange}
                   aria-label="ZIP archive file input"
@@ -189,32 +199,34 @@ export function RepoInputPanel() {
                   </div>
                 )}
               </div>
-              {zipError && (
-                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400" role="alert">
-                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                  {zipError}
-                </p>
-              )}
             </div>
           </div>
         )}
 
-        <button type="submit" className="btn-primary mt-4 w-full justify-center">
-          <Search className="w-4 h-4" aria-hidden="true" />
-          Analyse Repository
-        </button>
-
-        {submitted && (
-          <div className="mt-3 flex items-start gap-2 p-3 bg-brand-500/10 border border-brand-500/30 rounded-lg text-xs text-brand-300" role="status">
-            <Info className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
-            <span>
-              <strong>Repository analysis will be enabled in Milestone 2.</strong>{' '}
-              The input has been validated. The analysis engine — repository cloning,
-              code inventory, and architecture extraction — is planned for the next
-              development iteration.
-            </span>
-          </div>
+        {activeError && (
+          <p className="mt-2.5 flex items-center gap-1.5 text-xs text-red-400" role="alert">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            {activeError}
+          </p>
         )}
+
+        <button
+          type="submit"
+          disabled={isAnalyzing}
+          className="btn-primary mt-4 w-full justify-center"
+        >
+          {isAnalyzing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+              Analyzing Repository Structure…
+            </>
+          ) : (
+            <>
+              <Search className="w-4 h-4" aria-hidden="true" />
+              Analyse Repository
+            </>
+          )}
+        </button>
       </form>
     </div>
   )

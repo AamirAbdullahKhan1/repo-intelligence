@@ -31,11 +31,14 @@ def test_implemented_capabilities_present(client: TestClient) -> None:
     implemented_ids = {c["id"] for c in capabilities if c["status"] == "implemented"}
     assert "health_check" in implemented_ids
     assert "capabilities_discovery" in implemented_ids
+    assert "github_ingest" in implemented_ids
+    assert "zip_ingest" in implemented_ids
+    assert "repo_inventory" in implemented_ids
 
 
 def test_planned_capabilities_present(client: TestClient) -> None:
     capabilities = client.get("/api/v1/capabilities").json()["capabilities"]
     planned_ids = {c["id"] for c in capabilities if c["status"] == "planned"}
-    assert "github_ingest" in planned_ids
     assert "threat_model" in planned_ids
     assert "pdf_report" in planned_ids
+    assert "architecture_model" in planned_ids

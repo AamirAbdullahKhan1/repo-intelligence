@@ -13,9 +13,9 @@ export function Workflows() {
       <div className="card min-h-96">
         <EmptyState
           icon={GitBranch}
-          title="No workflow data"
-          description="Workflows are extracted from route analysis, background task patterns, and integration points detected in the repository."
-          badge="Requires Milestone 2 analysis engine"
+          title="Workflow Sequence & Job Analysis"
+          description="Milestone 2 route and manifest analysis is complete. In Milestone 3, sequential request flows and message queue workflows will be visually mapped."
+          badge="Queued for Milestone 3"
         />
       </div>
     </div>

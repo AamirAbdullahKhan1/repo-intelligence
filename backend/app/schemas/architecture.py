@@ -78,3 +78,4 @@ class ArchitectureModel(BaseModel):
     explanation: str
     llm_enhanced: bool = False
     model_used: Optional[str] = None
+

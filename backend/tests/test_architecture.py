@@ -117,3 +117,4 @@ def test_baseline_explanation_contains_evidence_basis() -> None:
     assert "Evidence Basis" in arch.explanation
     assert "FastAPI" in arch.explanation
     assert "sample-ecommerce" in arch.explanation
+

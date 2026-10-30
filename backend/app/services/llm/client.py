@@ -132,3 +132,4 @@ class AzureLLMService:
             logger.warning("Azure OpenAI call failed; falling back to deterministic explanation: %s", e)
 
         return arch_model.explanation, False, "deterministic_synthesizer"
+

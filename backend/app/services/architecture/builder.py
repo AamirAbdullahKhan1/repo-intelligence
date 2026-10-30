@@ -379,3 +379,4 @@ class ArchitectureBuilder:
             "> **Evidence Basis:** Grounded directly in static manifest entries, AST patterns, and file declarations. Import relationships indicate code dependencies, not dynamic runtime paths.",
         ]
         return "\n".join(lines)
+

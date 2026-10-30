@@ -33,3 +33,4 @@ def test_llm_routing_selection() -> None:
     assert settings.llm_configured is True
     assert settings.azure_openai_gpt41_deployment == "gpt-41-prod"
     assert settings.azure_openai_astra_deployment == "gpt-6-astra-preview"
+

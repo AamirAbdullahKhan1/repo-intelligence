@@ -32,6 +32,15 @@ def test_analyze_upload_success(client: TestClient) -> None:
     assert len(inv["routes"]) == 1
     assert inv["routes"][0]["path"] == "/health"
 
+    # Architecture validation (Milestone 3)
+    arch = data["architecture"]
+    assert arch["repo_name"] == "test_project"
+    assert len(arch["nodes"]) >= 2  # client + service
+    assert len(arch["edges"]) >= 1
+    assert len(arch["workflows"]) >= 1
+    assert "explanation" in arch
+    assert len(arch["explanation"]) > 0
+
 
 def test_analyze_upload_reject_non_zip(client: TestClient) -> None:
     files = {"file": ("malicious.exe", io.BytesIO(b"binary"), "application/octet-stream")}
@@ -47,3 +56,4 @@ def test_analyze_github_reject_invalid_url(client: TestClient) -> None:
     )
     assert response.status_code == 422
     assert "Invalid GitHub repository URL" in response.json()["detail"]
+

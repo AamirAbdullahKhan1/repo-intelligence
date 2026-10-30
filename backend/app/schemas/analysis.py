@@ -65,6 +65,10 @@ class RepositoryInventory(BaseModel):
     summary: str
 
 
+from app.schemas.architecture import ArchitectureModel
+
+
 class AnalysisResponse(BaseModel):
     status: Literal["success"] = "success"
     inventory: RepositoryInventory
+    architecture: ArchitectureModel

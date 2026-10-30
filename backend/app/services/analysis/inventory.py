@@ -581,3 +581,4 @@ class RepositoryAnalyzer:
             parts.append(f"utilizing {', '.join(db_names)}")
 
         return ". ".join(parts) + "."
+

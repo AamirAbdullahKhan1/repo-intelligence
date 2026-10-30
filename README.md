@@ -2,7 +2,7 @@
 
 AI-assisted repository intelligence platform that analyses a software repository, reconstructs its architecture and workflows, identifies potential security threats from code evidence, and generates an evidence-backed security assessment report.
 
-> **Milestone 2 — Repository Ingestion & Code Inventory.** This release delivers safe GitHub repository cloning and ZIP archive ingestion, isolated sandboxed workspaces, deterministic code inventory (languages, frameworks, manifests, dependencies, HTTP routes, databases, authentication, and infrastructure), and live dashboard visualization.
+> **Milestone 3 — Architecture & Workflows Complete.** This release reconstructs an interactive component graph and workflow execution pipelines from repository code evidence, integrates Azure OpenAI (GPT-4.1 default, GPT-6 Astra escalation) with deterministic fallback, and provides interactive React Flow diagrams and step-by-step workflow visualizers.
 
 ---
 
@@ -10,24 +10,26 @@ AI-assisted repository intelligence platform that analyses a software repository
 
 ```
 repo-intelligence/
-├── frontend/                        # React · Vite · TypeScript · Tailwind CSS
+├── frontend/                        # React · Vite · TypeScript · Tailwind CSS · React Flow
 │   ├── src/
 │   │   ├── components/              # Reusable UI components
-│   │   │   ├── Sidebar.tsx          # Navigation sidebar with backend status
-│   │   │   ├── RepoInputPanel.tsx   # GitHub URL / ZIP input with real analysis trigger
+│   │   │   ├── Sidebar.tsx          # Navigation sidebar with active repository context
+│   │   │   ├── RepoInputPanel.tsx   # Live GitHub URL / ZIP input with analysis trigger
 │   │   │   ├── RepositorySummaryCard.tsx # Code inventory dashboard with tabbed breakdowns
 │   │   │   ├── BackendStatusCard.tsx
 │   │   │   ├── EmptyState.tsx
 │   │   │   ├── PageHeader.tsx
 │   │   │   └── StatusBadge.tsx
 │   │   ├── pages/                   # Route-level page components
-│   │   │   ├── Dashboard.tsx        # Ingestion, status, and active repository summary
-│   │   │   ├── Architecture.tsx     # Queued for Milestone 3 (React Flow diagram)
-│   │   │   ├── Workflows.tsx        # Queued for Milestone 3 (workflow sequences)
+│   │   │   ├── Dashboard.tsx        # Ingestion, status, and repository summary
+│   │   │   ├── Architecture.tsx     # Interactive React Flow component graph & inspector
+│   │   │   ├── Workflows.tsx        # Step-by-step request, auth, and CI/CD lifecycles
 │   │   │   ├── ThreatModel.tsx      # Queued for Milestone 4 (threat findings)
 │   │   │   └── Reports.tsx          # Queued for Milestone 5 (PDF export)
+│   │   ├── context/
+│   │   │   └── AnalysisContext.tsx  # Shared repository & architecture state across routes
 │   │   ├── layouts/
-│   │   │   └── AppLayout.tsx        # Sidebar + main content layout
+│   │   │   └── AppLayout.tsx        # Persistent shell layout
 │   │   ├── services/
 │   │   │   └── api.ts               # Typed API client with /analyze endpoints
 │   │   ├── hooks/
@@ -56,7 +58,8 @@ repo-intelligence/
 │   │   │   ├── common.py            # ErrorResponse
 │   │   │   ├── health.py            # HealthResponse
 │   │   │   ├── capabilities.py      # CapabilitiesResponse, Capability
-│   │   │   └── analysis.py          # AnalysisResponse, RepositoryInventory, etc.
+│   │   │   ├── analysis.py          # AnalysisResponse, RepositoryInventory
+│   │   │   └── architecture.py      # ArchitectureModel, ArchitectureNode, Edge, Workflow
 │   │   ├── services/
 │   │   │   ├── repository/          # Safe repository ingestion & sandboxing
 │   │   │   │   ├── safe_extract.py  # Zip-Slip protection, size limits, symlink filter
@@ -64,8 +67,10 @@ repo-intelligence/
 │   │   │   │   └── workspace.py     # Isolated temporary sandboxes
 │   │   │   ├── analysis/            # Deterministic code inventory engine
 │   │   │   │   └── inventory.py     # AST/regex & manifest parsing
-│   │   │   ├── architecture/        # Planned: component model builder (Milestone 3)
-│   │   │   ├── llm/                 # Planned: Azure OpenAI routing (Milestone 3)
+│   │   │   ├── architecture/        # Architecture model & workflow builder
+│   │   │   │   └── builder.py       # Graph nodes, relationship edges, and workflow steps
+│   │   │   ├── llm/                 # Azure OpenAI client (GPT-4.1 / GPT-6 Astra)
+│   │   │   │   └── client.py        # Evidence-grounded architecture reasoning with fallback
 │   │   │   ├── threat_model/        # Planned: evidence-linked threat findings (Milestone 4)
 │   │   │   └── reporting/           # Planned: ReportLab PDF generation (Milestone 5)
 │   │   ├── main.py                  # FastAPI app, CORS, exception handlers
@@ -78,6 +83,8 @@ repo-intelligence/
 │   │   ├── test_safe_extract.py     # Zip-Slip, size bomb, and sanitization tests
 │   │   ├── test_github_clone.py     # URL validation and clone security tests
 │   │   ├── test_analysis.py         # Deterministic fixture analysis tests
+│   │   ├── test_architecture.py     # Graph nodes, edges, and workflow builder tests
+│   │   ├── test_llm_client.py       # Dual-model routing and fallback tests
 │   │   └── test_api_analyze.py      # Endpoints integration tests
 │   ├── requirements.txt
 │   └── .env.example
@@ -88,93 +95,46 @@ repo-intelligence/
 
 ---
 
-## Prerequisites
+## How to Analyze Any Public GitHub Repository
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| Python | 3.11+ | For the backend |
-| Node.js | 18+ | For the frontend |
-| pnpm / npm | 9+ | Package management |
-| Git | 2.x+ | Available on PATH for repository ingestion |
+You can enter any public GitHub repository URL (e.g. `https://github.com/fastapi/fastapi` or `https://github.com/pallets/flask`) into the **Overview** dashboard and immediately get:
+1. **Repository Inventory:** Languages breakdown, frameworks, entry points, detected HTTP endpoints, database drivers, and authentication mechanisms.
+2. **Architecture Map:** An interactive component node graph (Client, Services, Database, Auth, Infra) rendered with React Flow, with zoom/pan and a component inspection panel.
+3. **Workflow Pipelines:** Step-by-step visual execution paths for HTTP ingress, authentication challenges, and CI/CD pipelines with source citations.
+4. **Architectural Explanation:** Evidence-grounded narrative produced by Azure OpenAI (or the built-in deterministic synthesizer if Azure keys are not yet configured).
 
 ---
 
-## Backend Setup
+## Startup Instructions
 
-```bash
+### 1. Start Backend Server
+```powershell
 cd backend
-
-# Create and activate virtual environment
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start the development server
+.venv\Scripts\Activate.ps1
 uvicorn app.main:app --reload --port 8000
 ```
+- API is available at `http://localhost:8000`
+- Interactive Swagger docs: `http://localhost:8000/docs`
 
-The API is available at **http://localhost:8000**.  
-Interactive documentation: **http://localhost:8000/docs**
-
----
-
-## Frontend Setup
-
-```bash
+### 2. Start Frontend Dev Server
+```powershell
 cd frontend
-
-# Install dependencies
-pnpm install
-# or: npm install
-
-# Start the development server
-pnpm dev
-# or: npm run dev
+npm run dev
+# or: pnpm dev
 ```
-
-The frontend is available at **http://localhost:5173**.  
-Vite proxies all `/api` requests to `http://localhost:8000`.
+- Open `http://localhost:5173` in your browser.
 
 ---
 
-## API Endpoints
+## Running Automated Tests
 
-### 1. `GET /api/v1/health`
-Liveness check. Returns HTTP 200 without requiring Azure OpenAI credentials.
-
-### 2. `GET /api/v1/capabilities`
-Lists platform capabilities distinguishing `implemented` from `planned`.
-
-### 3. `POST /api/v1/analyze/github`
-Safe shallow clone of a public GitHub repository. Sanitizes URL, suppresses git hooks, and produces deterministic code inventory.
-```json
-{
-  "url": "https://github.com/fastapi/fastapi"
-}
-```
-
-### 4. `POST /api/v1/analyze/upload`
-Accepts a `multipart/form-data` upload with field `file: <archive.zip>`. Enforces 50 MiB limits and Zip-Slip traversal protection.
-
----
-
-## Running Tests
-
-### Backend Unit & Integration Tests (25 tests)
 ```bash
 cd backend
 .venv\Scripts\activate
 pytest tests/ -v
 ```
 
-### Frontend Type-Check & Build
+### Frontend Build & Type-Check
 ```bash
 cd frontend
 npx tsc --noEmit
@@ -183,21 +143,19 @@ npx vite build
 
 ---
 
-## Current Implementation Status
+## Implementation Status
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| FastAPI application shell | ✅ Implemented | Production-ready with centralized config |
-| `GET /api/v1/health` | ✅ Implemented | Liveness check |
-| `GET /api/v1/capabilities` | ✅ Implemented | Dynamic discovery |
-| CORS for local Vite dev server | ✅ Implemented | Reverse-proxied via Vite |
+| FastAPI shell & health check | ✅ Implemented | Production-ready with centralized config |
+| Dynamic capabilities discovery | ✅ Implemented | Distinguishes implemented vs. planned |
 | Safe GitHub Repository Ingest | ✅ Implemented | Depth=1, hook suppression, URL validation |
 | Safe ZIP Archive Ingest | ✅ Implemented | Zip-Slip traversal protection & size bomb checks |
-| Deterministic Code Inventory | ✅ Implemented | Language metrics, manifests, deps, routes, DB, auth |
-| Live Dashboard Visualizer | ✅ Implemented | Tabbed breakdown with verified code evidence pill |
-| Automated Backend Tests | ✅ Implemented | 25/25 Pytest tests passing |
+| Deterministic Code Inventory | ✅ Implemented | Languages, manifests, deps, routes, DB, auth |
+| Architecture Graph & React Flow | ✅ Implemented | Interactive nodes, edges, and inspector drawer |
+| Workflow Sequence Pipeline | ✅ Implemented | Request, auth, and CI/CD execution steps |
+| Azure OpenAI Integration | ✅ Implemented | GPT-4.1 default + Astra escalation + fallback |
+| Automated Backend Tests | ✅ Implemented | 30/30 Pytest tests passing |
 | Frontend Shell & Build | ✅ Implemented | Strict TypeScript & Vite build passing |
-| Architecture Model & Diagram | 🔲 Planned (Milestone 3) | React Flow interactive graph |
-| Azure OpenAI Interpretation | 🔲 Planned (Milestone 3) | GPT-4.1 default + Astra escalation |
-| Threat Model Engine | 🔲 Planned (Milestone 4) | Evidence-linked findings |
+| Threat Model Engine | 🔲 Planned (Milestone 4) | Evidence-linked findings & SDLC recommendations |
 | PDF Report Export | 🔲 Planned (Milestone 5) | ReportLab PDF generator |

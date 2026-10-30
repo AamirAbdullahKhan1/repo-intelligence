@@ -55,7 +55,7 @@ _CAPABILITIES: list[Capability] = [
             "Build a structured model of components, relationships, and "
             "data-flow edges from deterministic code analysis."
         ),
-        status="planned",
+        status="implemented",
     ),
     Capability(
         id="llm_interpretation",
@@ -65,7 +65,7 @@ _CAPABILITIES: list[Capability] = [
             "escalations) to produce a concise, evidence-grounded explanation "
             "of the extracted architecture."
         ),
-        status="planned",
+        status="implemented",
     ),
     Capability(
         id="threat_model",

@@ -66,3 +66,4 @@ def test_skip_vendor_and_ignored_directories(tmp_path: Path) -> None:
     assert (target / "app" / "main.py").exists()
     assert not (target / "node_modules").exists()
     assert not (target / ".git").exists()
+

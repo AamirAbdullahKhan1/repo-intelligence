@@ -116,3 +116,4 @@ def extract_zip_safely(
             return _process_zip(zf)
     except zipfile.BadZipFile as e:
         raise ZipExtractionError(f"Uploaded file is not a valid ZIP archive: {e}") from e
+

@@ -1,6 +1,6 @@
 """
-API v1 Endpoints for repository ingestion and deterministic code inventory.
-Supports both public GitHub URLs and ZIP archive uploads.
+API v1 Endpoints for repository ingestion, deterministic code inventory,
+and architecture/workflow model construction.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 import tempfile
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.config import Settings, get_settings
 from app.core.errors import ValidationError
@@ -18,7 +18,10 @@ from app.schemas.analysis import (
     AnalyzeGithubRequest,
     RepositoryInventory,
 )
+from app.schemas.architecture import ArchitectureModel
 from app.services.analysis import RepositoryAnalyzer
+from app.services.architecture import ArchitectureBuilder
+from app.services.llm import AzureLLMService
 from app.services.repository import Workspace, clone_github_repo, extract_zip_safely
 
 logger = logging.getLogger(__name__)
@@ -26,11 +29,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _construct_architecture(
+    inventory: RepositoryInventory,
+    settings: Settings,
+    escalate: bool = False,
+) -> ArchitectureModel:
+    """Build the architecture model and attempt evidence-grounded LLM enhancement."""
+    builder = ArchitectureBuilder(inventory)
+    arch_model = builder.build()
+
+    llm = AzureLLMService(settings)
+    explanation, llm_enhanced, model_used = llm.enhance_architecture_explanation(
+        arch_model, inventory, escalate=escalate
+    )
+    arch_model.explanation = explanation
+    arch_model.llm_enhanced = llm_enhanced
+    arch_model.model_used = model_used
+    return arch_model
+
+
 @router.post(
     "/analyze/github",
     response_model=AnalysisResponse,
     summary="Analyze public GitHub repository",
-    description="Shallow-clones a public GitHub repository safely and produces a deterministic code inventory.",
+    description=(
+        "Clones a public GitHub repository safely, produces a deterministic code inventory, "
+        "and constructs a full architecture graph and workflow model."
+    ),
 )
 async def analyze_github(
     payload: AnalyzeGithubRequest,
@@ -40,14 +65,18 @@ async def analyze_github(
         repo_name = clone_github_repo(payload.url, workspace_path)
         analyzer = RepositoryAnalyzer(workspace_path, repo_name=repo_name, source_type="github")
         inventory = analyzer.analyze()
-        return AnalysisResponse(status="success", inventory=inventory)
+        arch_model = _construct_architecture(inventory, settings)
+        return AnalysisResponse(status="success", inventory=inventory, architecture=arch_model)
 
 
 @router.post(
     "/analyze/upload",
     response_model=AnalysisResponse,
     summary="Analyze uploaded ZIP archive",
-    description="Safely extracts a ZIP repository archive with path-traversal protection and produces a code inventory.",
+    description=(
+        "Safely extracts a ZIP repository archive with path-traversal protection, "
+        "generates a code inventory, and builds the architecture and workflow model."
+    ),
 )
 async def analyze_upload(
     file: UploadFile = File(...),
@@ -57,7 +86,6 @@ async def analyze_upload(
     if not filename.lower().endswith(".zip"):
         raise ValidationError("Only .zip archives are supported.")
 
-    # Save uploaded chunks to a temporary file while enforcing max_upload_size_bytes
     with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp_file:
         tmp_path = Path(tmp_file.name)
         total_bytes = 0
@@ -85,7 +113,8 @@ async def analyze_upload(
             clean_name = filename.rsplit(".", 1)[0]
             analyzer = RepositoryAnalyzer(workspace_path, repo_name=clean_name, source_type="zip")
             inventory = analyzer.analyze()
-            return AnalysisResponse(status="success", inventory=inventory)
+            arch_model = _construct_architecture(inventory, settings)
+            return AnalysisResponse(status="success", inventory=inventory, architecture=arch_model)
     finally:
         if tmp_path.exists():
             tmp_path.unlink(missing_ok=True)

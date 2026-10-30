@@ -33,3 +33,4 @@ def test_reject_invalid_github_urls() -> None:
     for url in invalid:
         with pytest.raises(ValidationError):
             parse_and_sanitize_github_url(url)
+

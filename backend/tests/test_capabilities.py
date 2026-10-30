@@ -34,6 +34,8 @@ def test_implemented_capabilities_present(client: TestClient) -> None:
     assert "github_ingest" in implemented_ids
     assert "zip_ingest" in implemented_ids
     assert "repo_inventory" in implemented_ids
+    assert "architecture_model" in implemented_ids
+    assert "llm_interpretation" in implemented_ids
 
 
 def test_planned_capabilities_present(client: TestClient) -> None:
@@ -41,4 +43,3 @@ def test_planned_capabilities_present(client: TestClient) -> None:
     planned_ids = {c["id"] for c in capabilities if c["status"] == "planned"}
     assert "threat_model" in planned_ids
     assert "pdf_report" in planned_ids
-    assert "architecture_model" in planned_ids

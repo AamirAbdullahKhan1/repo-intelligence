@@ -1,6 +1,8 @@
 """
-Architecture model builder — PLANNED (Milestone 3).
-
-Will construct a structured model containing components, relationships,
-workflows, and source file references from analysis output.
+Architecture model service.
+Constructs component nodes, relationship edges, and workflows from code inventory.
 """
+
+from app.services.architecture.builder import ArchitectureBuilder
+
+__all__ = ["ArchitectureBuilder"]

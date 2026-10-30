@@ -79,3 +79,4 @@ def test_repository_analyzer_fastapi_fixture(tmp_path: Path) -> None:
     infra_names = {i.name for i in inventory.infrastructure}
     assert "Docker Containerization" in infra_names
     assert "Docker Compose" in infra_names
+

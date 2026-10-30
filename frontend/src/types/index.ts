@@ -24,7 +24,7 @@ export interface ApiError {
   detail: string
 }
 
-// ── Repository Inventory Types (Milestone 2) ───────────────────────────────────
+// ── Repository Inventory Types ─────────────────────────────────────────────────
 
 export interface LanguageStat {
   name: string
@@ -73,9 +73,78 @@ export interface RepositoryInventory {
   summary: string
 }
 
+// ── Architecture & Workflow Models (Milestone 3) ──────────────────────────────
+
+export type ArchitectureNodeType =
+  | 'client'
+  | 'api_gateway'
+  | 'service'
+  | 'database'
+  | 'auth'
+  | 'worker'
+  | 'infrastructure'
+  | 'external'
+
+export interface ArchitectureNode {
+  id: string
+  label: string
+  type: ArchitectureNodeType
+  category: string
+  technology?: string | null
+  file_references: string[]
+  confidence: 'verified_code_evidence' | 'reasonable_inference' | 'unknown'
+  description?: string | null
+  metadata: Record<string, any>
+}
+
+export interface ArchitectureEdge {
+  id: string
+  source: string
+  target: string
+  label: string
+  relationship_type:
+    | 'calls'
+    | 'authenticates_with'
+    | 'reads_writes'
+    | 'depends_on'
+    | 'deploys_to'
+  confidence: 'verified_code_evidence' | 'reasonable_inference' | 'unknown'
+  evidence_file?: string | null
+  description?: string | null
+}
+
+export interface WorkflowStep {
+  step_number: number
+  component_id: string
+  component_label: string
+  action: string
+  file_reference?: string | null
+  confidence: 'verified_code_evidence' | 'reasonable_inference' | 'unknown'
+}
+
+export interface WorkflowModel {
+  id: string
+  name: string
+  description: string
+  trigger: string
+  steps: WorkflowStep[]
+  components_involved: string[]
+}
+
+export interface ArchitectureModel {
+  repo_name: string
+  nodes: ArchitectureNode[]
+  edges: ArchitectureEdge[]
+  workflows: WorkflowModel[]
+  explanation: string
+  llm_enhanced: boolean
+  model_used?: string | null
+}
+
 export interface AnalysisResponse {
   status: 'success'
   inventory: RepositoryInventory
+  architecture: ArchitectureModel
 }
 
 // ── Application State Types ───────────────────────────────────────────────────

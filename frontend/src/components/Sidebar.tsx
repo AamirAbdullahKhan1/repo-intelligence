@@ -9,8 +9,10 @@ import {
   Wifi,
   WifiOff,
   Loader2,
+  FolderGit2,
 } from 'lucide-react'
 import type { BackendStatus } from '../types'
+import { useAnalysis } from '../context/AnalysisContext'
 
 interface SidebarProps {
   backendStatus: BackendStatus
@@ -50,6 +52,8 @@ function BackendStatusIndicator({ status }: { status: BackendStatus }) {
 }
 
 export function Sidebar({ backendStatus }: SidebarProps) {
+  const { inventory } = useAnalysis()
+
   return (
     <aside className="w-60 flex-shrink-0 bg-surface-800 border-r border-surface-600 flex flex-col">
       {/* Brand */}
@@ -67,6 +71,19 @@ export function Sidebar({ backendStatus }: SidebarProps) {
         </div>
       </div>
 
+      {/* Active Repository Pill */}
+      {inventory && (
+        <div className="mx-3 mt-3 p-2.5 rounded-lg bg-surface-700/60 border border-surface-600 text-xs">
+          <div className="flex items-center gap-2 text-brand-300 font-medium truncate">
+            <FolderGit2 className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">{inventory.repo_name}</span>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            {inventory.primary_language || 'Repo'} · {inventory.total_files} files
+          </p>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1" aria-label="Main navigation">
         {NAV_ITEMS.map(({ label, path, icon: Icon }) => (
@@ -76,7 +93,6 @@ export function Sidebar({ backendStatus }: SidebarProps) {
             className={({ isActive }) =>
               isActive ? 'nav-item-active' : 'nav-item'
             }
-            aria-current={undefined}
           >
             <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
             <span>{label}</span>
@@ -87,7 +103,7 @@ export function Sidebar({ backendStatus }: SidebarProps) {
       {/* Backend Status Footer */}
       <div className="px-4 py-3 border-t border-surface-600">
         <BackendStatusIndicator status={backendStatus} />
-        <p className="text-xs text-gray-600 mt-1.5">v0.1.0 · Milestone 1</p>
+        <p className="text-xs text-gray-600 mt-1.5">v0.1.0 · Milestone 3</p>
       </div>
     </aside>
   )

@@ -424,3 +424,4 @@ export function RepositorySummaryCard({ inventory }: RepositorySummaryCardProps)
     </div>
   )
 }
+

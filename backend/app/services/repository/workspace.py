@@ -36,3 +36,4 @@ class Workspace:
                 logger.debug("Cleaned up temporary workspace at %s", self._temp_dir)
             except Exception as e:
                 logger.warning("Failed to clean up workspace %s: %e", self._temp_dir, e)
+

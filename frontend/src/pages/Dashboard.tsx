@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Shield,
   Network,
@@ -6,80 +6,40 @@ import {
   ShieldAlert,
   FileText,
   Package,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { RepoInputPanel } from '../components/RepoInputPanel'
 import { BackendStatusCard } from '../components/BackendStatusCard'
 import { EmptyState } from '../components/EmptyState'
 import { RepositorySummaryCard } from '../components/RepositorySummaryCard'
-import { api, ApiClientError } from '../services/api'
-import type { RepositoryInventory } from '../types'
+import { useAnalysis } from '../context/AnalysisContext'
 
 const MILESTONE_FEATURES = [
   {
-    icon: Network,
-    title: 'Architecture Map',
-    description: 'Interactive diagram of components, services, and data flows.',
-    milestone: 'Milestone 3',
-  },
-  {
-    icon: GitBranch,
-    title: 'Workflow Analysis',
-    description: 'Identified request paths, background jobs, and integrations.',
-    milestone: 'Milestone 3',
-  },
-  {
     icon: ShieldAlert,
-    title: 'Threat Model',
+    title: 'Threat Model Engine',
     description: 'Evidence-linked security findings with SDLC recommendations.',
     milestone: 'Milestone 4',
   },
   {
     icon: FileText,
-    title: 'PDF Report',
+    title: 'PDF Security Report',
     description: 'Professionally formatted, exportable security assessment.',
     milestone: 'Milestone 5',
   },
 ]
 
 export function Dashboard() {
-  const [inventory, setInventory] = useState<RepositoryInventory | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  async function handleAnalyzeGithub(url: string) {
-    setIsAnalyzing(true)
-    setErrorMessage(null)
-    try {
-      const res = await api.analyzeGithub(url)
-      setInventory(res.inventory)
-    } catch (err) {
-      if (err instanceof ApiClientError) {
-        setErrorMessage(err.message)
-      } else {
-        setErrorMessage('Failed to analyze repository. Check your connection to the server.')
-      }
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  async function handleAnalyzeZip(file: File) {
-    setIsAnalyzing(true)
-    setErrorMessage(null)
-    try {
-      const res = await api.analyzeZip(file)
-      setInventory(res.inventory)
-    } catch (err) {
-      if (err instanceof ApiClientError) {
-        setErrorMessage(err.message)
-      } else {
-        setErrorMessage('Failed to analyze uploaded archive. Check your connection to the server.')
-      }
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
+  const {
+    inventory,
+    architecture,
+    isAnalyzing,
+    error,
+    analyzeGithub,
+    analyzeZip,
+  } = useAnalysis()
 
   return (
     <div className="px-6 py-6 max-w-5xl mx-auto space-y-6">
@@ -87,7 +47,7 @@ export function Dashboard() {
         title="Repo Intelligence"
         description="AI-assisted repository analysis for architecture understanding and security assessment."
         badge={
-          <span className="badge badge-green">Milestone 2 — Ingestion & Inventory</span>
+          <span className="badge badge-green">Milestone 3 — Architecture & Workflows</span>
         }
       />
 
@@ -96,12 +56,12 @@ export function Dashboard() {
         {/* Repository Input */}
         <RepoInputPanel
           isAnalyzing={isAnalyzing}
-          onAnalyzeGithub={handleAnalyzeGithub}
-          onAnalyzeZip={handleAnalyzeZip}
-          errorMessage={errorMessage}
+          onAnalyzeGithub={analyzeGithub}
+          onAnalyzeZip={analyzeZip}
+          errorMessage={error}
         />
 
-        {/* Backend Status & Info */}
+        {/* Backend Status & Capabilities */}
         <div className="space-y-4">
           <BackendStatusCard />
 
@@ -114,31 +74,67 @@ export function Dashboard() {
               <li className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold mt-0.5">✓</span>
                 <span>
-                  <strong className="text-gray-300">Safe Ingestion:</strong> Shallow git cloning with hook suppression & Zip-Slip protected extraction.
+                  <strong className="text-gray-300">Live GitHub & ZIP Ingestion:</strong> Safe shallow clone with hook suppression & Zip-Slip protection.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold mt-0.5">✓</span>
                 <span>
-                  <strong className="text-gray-300">Code Inventory:</strong> Deterministic language metrics, manifests, and declared dependencies.
+                  <strong className="text-gray-300">Deterministic Code Inventory:</strong> Languages, manifests, routes, databases, and auth mechanisms.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold mt-0.5">✓</span>
                 <span>
-                  <strong className="text-gray-300">Route & Framework Detection:</strong> Regex/AST detection of HTTP routes and web frameworks.
+                  <strong className="text-gray-300">Interactive Architecture Diagram:</strong> React Flow component graph with trust boundaries.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-emerald-400 font-bold mt-0.5">✓</span>
                 <span>
-                  <strong className="text-gray-300">Security Indicators:</strong> Database drivers, ORMs, JWT/auth patterns, and container configs.
+                  <strong className="text-gray-300">Workflow Execution Paths:</strong> End-to-end request, auth, and CI/CD lifecycle step mappings.
                 </span>
               </li>
             </ul>
           </div>
         </div>
       </div>
+
+      {/* Ready Navigation Pill when analyzed */}
+      {inventory && architecture && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-brand-950/40 border border-brand-500/30 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-100">
+                Architecture & Workflows Ready for {inventory.repo_name}
+              </p>
+              <p className="text-gray-400 mt-0.5">
+                {architecture.nodes.length} component nodes, {architecture.edges.length} relationships, and {architecture.workflows.length} workflows extracted.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/architecture"
+              className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+            >
+              <Network className="w-3.5 h-3.5" />
+              View Architecture
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              to="/workflows"
+              className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+            >
+              <GitBranch className="w-3.5 h-3.5" />
+              Explore Workflows
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Repository Summary */}
       {inventory ? (
@@ -154,7 +150,7 @@ export function Dashboard() {
           <EmptyState
             icon={Package}
             title="No repository loaded"
-            description="Provide a GitHub URL or upload a ZIP archive above to run deterministic code inventory."
+            description="Enter a public GitHub repository URL or upload a ZIP archive above to reconstruct its architecture and workflows."
           />
         </div>
       )}
@@ -164,7 +160,7 @@ export function Dashboard() {
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
           Upcoming Milestones
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {MILESTONE_FEATURES.map(({ icon: Icon, title, description, milestone }) => (
             <div
               key={title}

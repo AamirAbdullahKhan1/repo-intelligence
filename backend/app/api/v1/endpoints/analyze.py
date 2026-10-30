@@ -32,10 +32,11 @@ router = APIRouter()
 def _construct_architecture(
     inventory: RepositoryInventory,
     settings: Settings,
+    workspace_dir: Optional[Path] = None,
     escalate: bool = False,
 ) -> ArchitectureModel:
     """Build the architecture model and attempt evidence-grounded LLM enhancement."""
-    builder = ArchitectureBuilder(inventory)
+    builder = ArchitectureBuilder(inventory, workspace_dir=workspace_dir)
     arch_model = builder.build()
 
     llm = AzureLLMService(settings)
@@ -65,7 +66,7 @@ async def analyze_github(
         repo_name = clone_github_repo(payload.url, workspace_path)
         analyzer = RepositoryAnalyzer(workspace_path, repo_name=repo_name, source_type="github")
         inventory = analyzer.analyze()
-        arch_model = _construct_architecture(inventory, settings)
+        arch_model = _construct_architecture(inventory, settings, workspace_dir=workspace_path)
         return AnalysisResponse(status="success", inventory=inventory, architecture=arch_model)
 
 
@@ -113,7 +114,7 @@ async def analyze_upload(
             clean_name = filename.rsplit(".", 1)[0]
             analyzer = RepositoryAnalyzer(workspace_path, repo_name=clean_name, source_type="zip")
             inventory = analyzer.analyze()
-            arch_model = _construct_architecture(inventory, settings)
+            arch_model = _construct_architecture(inventory, settings, workspace_dir=workspace_path)
             return AnalysisResponse(status="success", inventory=inventory, architecture=arch_model)
     finally:
         if tmp_path.exists():

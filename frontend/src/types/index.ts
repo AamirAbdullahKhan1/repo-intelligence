@@ -73,17 +73,46 @@ export interface RepositoryInventory {
   summary: string
 }
 
-// ── Architecture & Workflow Models (Milestone 3) ──────────────────────────────
+// ── Architecture & Workflow Models (V2 Multi-Layer & Hierarchical) ─────────────
 
 export type ArchitectureNodeType =
   | 'client'
-  | 'api_gateway'
-  | 'service'
-  | 'database'
-  | 'auth'
+  | 'frontend_app'
+  | 'api_service'
+  | 'mcp_server'
   | 'worker'
+  | 'serverless_function'
+  | 'database'
+  | 'cache'
+  | 'auth'
+  | 'shared_library'
   | 'infrastructure'
-  | 'external'
+  | 'external_service'
+
+export type ArchitectureEdgeType =
+  | 'IMPORTS'
+  | 'CALLS'
+  | 'HANDLES_ROUTE'
+  | 'READS_FROM'
+  | 'WRITES_TO'
+  | 'CONNECTS_TO'
+  | 'PUBLISHES_EVENT'
+  | 'CONSUMES_EVENT'
+  | 'DEPLOYED_AS'
+  | 'TRIGGERS_WORKFLOW'
+  | 'DEPENDS_ON'
+
+export type ConfidenceLevel = 'VERIFIED' | 'INFERRED' | 'UNKNOWN'
+
+export interface EvidenceMeta {
+  file_path: string
+  line_start?: number | null
+  line_end?: number | null
+  evidence_category: string
+  extraction_method: string
+  confidence: ConfidenceLevel
+  snippet?: string | null
+}
 
 export interface ArchitectureNode {
   id: string
@@ -91,10 +120,14 @@ export interface ArchitectureNode {
   type: ArchitectureNodeType
   category: string
   technology?: string | null
+  level?: number
+  parent_id?: string | null
   file_references: string[]
-  confidence: 'verified_code_evidence' | 'reasonable_inference' | 'unknown'
+  confidence: ConfidenceLevel
   description?: string | null
-  metadata: Record<string, any>
+  sub_modules?: string[]
+  evidence?: EvidenceMeta | null
+  metadata?: Record<string, any>
 }
 
 export interface ArchitectureEdge {
@@ -102,14 +135,11 @@ export interface ArchitectureEdge {
   source: string
   target: string
   label: string
-  relationship_type:
-    | 'calls'
-    | 'authenticates_with'
-    | 'reads_writes'
-    | 'depends_on'
-    | 'deploys_to'
-  confidence: 'verified_code_evidence' | 'reasonable_inference' | 'unknown'
+  relationship_type: ArchitectureEdgeType
+  confidence: ConfidenceLevel
   evidence_file?: string | null
+  line_number?: number | null
+  evidence?: EvidenceMeta | null
   description?: string | null
 }
 
@@ -119,7 +149,8 @@ export interface WorkflowStep {
   component_label: string
   action: string
   file_reference?: string | null
-  confidence: 'verified_code_evidence' | 'reasonable_inference' | 'unknown'
+  line_number?: number | null
+  confidence: ConfidenceLevel
 }
 
 export interface WorkflowModel {
@@ -131,11 +162,18 @@ export interface WorkflowModel {
   components_involved: string[]
 }
 
+export interface DeploymentModel {
+  nodes: ArchitectureNode[]
+  edges: ArchitectureEdge[]
+  pipeline_stages: string[]
+}
+
 export interface ArchitectureModel {
   repo_name: string
   nodes: ArchitectureNode[]
   edges: ArchitectureEdge[]
   workflows: WorkflowModel[]
+  deployment_view: DeploymentModel
   explanation: string
   llm_enhanced: boolean
   model_used?: string | null

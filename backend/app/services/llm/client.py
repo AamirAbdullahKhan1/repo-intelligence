@@ -62,9 +62,11 @@ class AzureLLMService:
                     "label": n.label,
                     "type": n.type,
                     "technology": n.technology,
+                    "sub_modules": n.sub_modules,
                     "confidence": n.confidence,
                 }
                 for n in arch_model.nodes
+                if n.level == 1
             ],
             "relationships": [
                 {
@@ -72,15 +74,16 @@ class AzureLLMService:
                     "target": e.target,
                     "relationship": e.relationship_type,
                     "label": e.label,
+                    "confidence": e.confidence,
                 }
                 for e in arch_model.edges
             ],
+            "deployment_pipeline": arch_model.deployment_view.pipeline_stages,
             "routes_sample": [
                 {"method": r.method, "path": r.path} for r in inventory.routes[:15]
             ],
             "databases": [d.name for d in inventory.databases],
             "authentication": [a.name for a in inventory.authentication],
-            "infrastructure": [i.name for i in inventory.infrastructure],
         }
 
         system_prompt = (

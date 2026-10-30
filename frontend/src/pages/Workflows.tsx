@@ -138,12 +138,12 @@ export function Workflows() {
                     </span>
                     <span
                       className={`badge text-[10px] ${
-                        step.confidence === 'verified_code_evidence'
+                        step.confidence === 'VERIFIED'
                           ? 'badge-green'
                           : 'badge-gray'
                       }`}
                     >
-                      {step.confidence === 'verified_code_evidence' ? 'verified code' : 'inferred'}
+                      {step.confidence === 'VERIFIED' ? 'VERIFIED' : 'INFERRED'}
                     </span>
                   </div>
 

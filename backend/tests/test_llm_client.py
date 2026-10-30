@@ -10,7 +10,13 @@ from tests.test_architecture import _sample_inventory
 
 
 def test_llm_client_falls_back_when_not_configured() -> None:
-    settings = Settings()
+    settings = Settings(
+        _env_file=None,
+        azure_openai_endpoint=None,
+        azure_openai_api_key=None,
+        azure_openai_api_version=None,
+        azure_openai_gpt41_deployment=None,
+    )
     inv = _sample_inventory()
     arch = ArchitectureBuilder(inv).build()
 

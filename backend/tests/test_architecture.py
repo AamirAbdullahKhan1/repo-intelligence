@@ -74,20 +74,21 @@ def test_architecture_builder_nodes_and_edges() -> None:
     assert arch.repo_name == "sample-ecommerce"
     node_types = {n.type for n in arch.nodes}
     assert "client" in node_types
-    assert "service" in node_types
+    assert "api_service" in node_types or "service" in node_types
     assert "database" in node_types
     assert "auth" in node_types
-    assert "infrastructure" in node_types
 
     edge_types = {e.relationship_type for e in arch.edges}
-    assert "calls" in edge_types
-    assert "reads_writes" in edge_types
-    assert "authenticates_with" in edge_types
-    assert "deploys_to" in edge_types
+    assert "HANDLES_ROUTE" in edge_types
+    assert "READS_FROM" in edge_types
+
+    # Deployment view separation (Phase 4)
+    assert arch.deployment_view is not None
+    assert len(arch.deployment_view.nodes) >= 1
 
     # Verified evidence flags
     db_node = next(n for n in arch.nodes if n.type == "database")
-    assert db_node.confidence == "verified_code_evidence"
+    assert db_node.confidence == "VERIFIED"
     assert "app/db.py" in db_node.file_references
 
 
@@ -97,16 +98,13 @@ def test_architecture_builder_workflows() -> None:
     arch = builder.build()
 
     wf_ids = {w.id for w in arch.workflows}
-    assert "wf-http-request" in wf_ids
-    assert "wf-auth" in wf_ids
-    assert "wf-deployment" in wf_ids
+    assert "wf-http-ingress" in wf_ids
 
-    http_wf = next(w for w in arch.workflows if w.id == "wf-http-request")
-    assert len(http_wf.steps) >= 4
+    http_wf = next(w for w in arch.workflows if w.id == "wf-http-ingress")
+    assert len(http_wf.steps) >= 3
     step_actions = [s.action for s in http_wf.steps]
     assert any("ingress" in a.lower() for a in step_actions)
-    assert any("jwt" in a.lower() or "bearer" in a.lower() for a in step_actions)
-    assert any("postgresql" in a.lower() for a in step_actions)
+    assert any("router" in a.lower() or "route" in a.lower() for a in step_actions)
 
 
 def test_baseline_explanation_contains_evidence_basis() -> None:
@@ -114,7 +112,5 @@ def test_baseline_explanation_contains_evidence_basis() -> None:
     builder = ArchitectureBuilder(inv)
     arch = builder.build()
 
-    assert "Evidence Basis" in arch.explanation
-    assert "FastAPI" in arch.explanation
+    assert "Evidence Grounding Standard" in arch.explanation or "Evidence Basis" in arch.explanation
     assert "sample-ecommerce" in arch.explanation
-

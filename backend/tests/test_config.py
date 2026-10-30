@@ -22,12 +22,20 @@ def test_parsed_allowed_origins() -> None:
 
 
 def test_llm_not_configured_by_default() -> None:
-    s = Settings()
+    s = Settings(
+        _env_file=None,
+        azure_openai_endpoint=None,
+        azure_openai_api_key=None,
+        azure_openai_api_version=None,
+        azure_openai_gpt41_deployment=None,
+        azure_openai_astra_deployment=None,
+    )
     assert s.llm_configured is False
 
 
 def test_llm_configured_when_all_vars_set() -> None:
     s = Settings(
+        _env_file=None,
         azure_openai_endpoint="https://example.openai.azure.com",
         azure_openai_api_key="test-key",
         azure_openai_api_version="2024-02-01",
@@ -37,7 +45,13 @@ def test_llm_configured_when_all_vars_set() -> None:
 
 
 def test_require_llm_config_raises_when_not_configured() -> None:
-    s = Settings()
+    s = Settings(
+        _env_file=None,
+        azure_openai_endpoint=None,
+        azure_openai_api_key=None,
+        azure_openai_api_version=None,
+        azure_openai_gpt41_deployment=None,
+    )
     with pytest.raises(RuntimeError, match="env vars are not set"):
         s.require_llm_config()
 

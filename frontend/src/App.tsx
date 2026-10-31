@@ -1,25 +1,28 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { AppLayout } from './layouts/AppLayout'
-import { Dashboard } from './pages/Dashboard'
-import { Architecture } from './pages/Architecture'
-import { Workflows } from './pages/Workflows'
-import { ThreatModel } from './pages/ThreatModel'
-import { Reports } from './pages/Reports'
-import { AnalysisProvider } from './context/AnalysisContext'
-
+import { RepositoryPanel } from "./components/repository/RepositoryPanel";
+import { Architecture } from "./pages/Architecture";
+import { useRepository } from "./hooks/useRepository";
 export default function App() {
+  const repository = useRepository();
   return (
-    <AnalysisProvider>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route index element={<Navigate to="/overview" replace />} />
-          <Route path="/overview" element={<Dashboard />} />
-          <Route path="/architecture" element={<Architecture />} />
-          <Route path="/workflows" element={<Workflows />} />
-          <Route path="/threat-model" element={<ThreatModel />} />
-          <Route path="/reports" element={<Reports />} />
-        </Route>
-      </Routes>
-    </AnalysisProvider>
-  )
+    <div className="workspace">
+      <RepositoryPanel
+        history={repository.history}
+        selected={repository.selected}
+        job={repository.job}
+        busy={repository.busy}
+        onGithub={repository.github}
+        onZip={repository.zip}
+        onCancel={repository.cancel}
+        onSelect={repository.select}
+      />
+      <Architecture
+        key={repository.selected + ":" + repository.viewRevision}
+        selected={repository.selected}
+        summary={repository.summary}
+        error={repository.error}
+        onDismiss={() => repository.setError("")}
+        onError={repository.setError}
+      />
+    </div>
+  );
 }

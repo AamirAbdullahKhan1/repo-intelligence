@@ -1,0 +1,16 @@
+{
+  "interpreter": "C:\\Users\\Asus\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+  "context": "System Python, not the backend runtime. These copies are unused by the running backend.",
+  "packages": {
+    "networkx": {
+      "version": "3.3",
+      "location": "C:\\Users\\Asus\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages",
+      "backend_usage": "unused"
+    },
+    "PyYAML": {
+      "version": "6.0.2",
+      "location": "C:\\Users\\Asus\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages",
+      "backend_usage": "unused"
+    }
+  }
+}

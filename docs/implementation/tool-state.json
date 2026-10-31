@@ -1,0 +1,109 @@
+{
+  "interpreter": "C:\\Users\\Asus\\OneDrive\\Desktop\\repo-intelligence\\backend\\.venv\\Scripts\\python.exe",
+  "prefix": "C:\\Users\\Asus\\OneDrive\\Desktop\\repo-intelligence\\backend\\.venv",
+  "base_prefix": "C:\\Users\\Asus\\AppData\\Local\\Programs\\Python\\Python312",
+  "tools": {
+    "typescript": {
+      "version": "5.9.3",
+      "used_by": "backend/workers/typescript/index.cjs",
+      "status": "primary engine",
+      "installed": true,
+      "integration_status": "active",
+      "required": true
+    },
+    "reactflow": {
+      "version": "11.11.4",
+      "used_by": "frontend/src/components/diagrams/ArchitectureCanvas.tsx",
+      "status": "interactive rendering",
+      "installed": true,
+      "integration_status": "active",
+      "required": true
+    },
+    "elkjs": {
+      "version": "0.12.1",
+      "used_by": "frontend/src/components/diagrams/ArchitectureCanvas.tsx",
+      "status": "hierarchical layout in browser Web Worker",
+      "installed": true,
+      "integration_status": "active",
+      "required": true
+    },
+    "sqlite": {
+      "version": "3.45.3",
+      "used_by": "backend/app/persistence/store.py",
+      "status": "job and canonical graph persistence",
+      "installed": true,
+      "integration_status": "active",
+      "required": true
+    },
+    "pyyaml": {
+      "version": "6.0.3",
+      "used_by": "backend/app/analysis/configuration.py",
+      "status": "narrow Compose declarations",
+      "installed": true,
+      "integration_status": "active",
+      "required": true,
+      "loaded_version": "6.0.3",
+      "module_path": "C:\\Users\\Asus\\OneDrive\\Desktop\\repo-intelligence\\backend\\.venv\\Lib\\site-packages\\yaml\\__init__.py",
+      "metadata_matches_loaded": true
+    },
+    "syft": {
+      "path": null,
+      "status": "deferred; package manifest inventory does not equal SBOM",
+      "installed": false,
+      "integration_status": "deferred",
+      "required": false
+    },
+    "networkx": {
+      "version": null,
+      "status": "deferred; bounded traversal and projections use standard Python",
+      "installed": false,
+      "integration_status": "deferred",
+      "required": false
+    },
+    "tree_sitter": {
+      "version": null,
+      "status": "deferred; no second parser required in current TS/JS scope",
+      "installed": false,
+      "integration_status": "deferred",
+      "required": false
+    },
+    "ast_grep": {
+      "path": null,
+      "status": "deferred; presence is not integration",
+      "installed": false,
+      "integration_status": "deferred",
+      "required": false
+    },
+    "semgrep": {
+      "path": null,
+      "version": null,
+      "status": "deferred; security rules are outside this relationship MVP",
+      "installed": false,
+      "integration_status": "deferred",
+      "required": false
+    },
+    "gitleaks": {
+      "path": null,
+      "status": "deferred; limited metadata redaction is not a Gitleaks scan",
+      "installed": false,
+      "integration_status": "deferred",
+      "required": false
+    },
+    "openai": {
+      "version": null,
+      "status": "removed from this backend environment and runtime",
+      "installed": false,
+      "integration_status": "removed",
+      "required": false
+    },
+    "react-flow-renderer": {
+      "version": null,
+      "status": "removed duplicate",
+      "installed": false,
+      "integration_status": "removed",
+      "required": false
+    }
+  },
+  "meaning": "This interpreter only. Other Python installations do not change this backend runtime.",
+  "syft_role": "Future SBOM inventory only; not source relationship resolution."
+}

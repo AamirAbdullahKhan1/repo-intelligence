@@ -1,0 +1,1 @@
+Static analysis fixture. Do not install or run it. Expected: GET /api/users -> GET -> load -> pg SDK use. No concrete database hostname can be established. The analyzer must not invent a database deployment.

@@ -1,161 +1,98 @@
 # Repo Intelligence
 
-AI-assisted repository intelligence platform that analyses a software repository, reconstructs its architecture and workflows, identifies potential security threats from code evidence, and generates an evidence-backed security assessment report.
+A local, AI-independent TypeScript/JavaScript repository analysis MVP. Submit a public GitHub repository or ZIP, save a validated static graph in SQLite, and explore system architecture or a bounded internal call graph with source evidence.
 
-> **Milestone 3 — Architecture & Workflows Complete.** This release reconstructs an interactive component graph and workflow execution pipelines from repository code evidence, integrates Azure OpenAI (GPT-4.1 default, GPT-6 Astra escalation) with deterministic fallback, and provides interactive React Flow diagrams and step-by-step workflow visualizers.
+The project does not execute target scripts, install target dependencies, or invoke a model. Framework support is incremental. Read [security and analysis limits](docs/implementation/security-and-limits.md) before using untrusted inputs.
 
----
+## Run locally on Windows
 
-## Architecture
+Prerequisites: Python 3.12, Node.js 22, pnpm. Run these trusted application setup commands; the analyzer never runs them inside submitted repositories.
 
-```
-repo-intelligence/
-├── frontend/                        # React · Vite · TypeScript · Tailwind CSS · React Flow
-│   ├── src/
-│   │   ├── components/              # Reusable UI components
-│   │   │   ├── Sidebar.tsx          # Navigation sidebar with active repository context
-│   │   │   ├── RepoInputPanel.tsx   # Live GitHub URL / ZIP input with analysis trigger
-│   │   │   ├── RepositorySummaryCard.tsx # Code inventory dashboard with tabbed breakdowns
-│   │   │   ├── BackendStatusCard.tsx
-│   │   │   ├── EmptyState.tsx
-│   │   │   ├── PageHeader.tsx
-│   │   │   └── StatusBadge.tsx
-│   │   ├── pages/                   # Route-level page components
-│   │   │   ├── Dashboard.tsx        # Ingestion, status, and repository summary
-│   │   │   ├── Architecture.tsx     # Interactive React Flow component graph & inspector
-│   │   │   ├── Workflows.tsx        # Step-by-step request, auth, and CI/CD lifecycles
-│   │   │   ├── ThreatModel.tsx      # Queued for Milestone 4 (threat findings)
-│   │   │   └── Reports.tsx          # Queued for Milestone 5 (PDF export)
-│   │   ├── context/
-│   │   │   └── AnalysisContext.tsx  # Shared repository & architecture state across routes
-│   │   ├── layouts/
-│   │   │   └── AppLayout.tsx        # Persistent shell layout
-│   │   ├── services/
-│   │   │   └── api.ts               # Typed API client with /analyze endpoints
-│   │   ├── hooks/
-│   │   │   └── useHealth.ts         # Backend health polling hook
-│   │   └── types/
-│   │       └── index.ts             # Strict TypeScript types & schemas
-│   ├── public/
-│   ├── package.json
-│   ├── vite.config.ts               # Vite + /api proxy to localhost:8000
-│   ├── tailwind.config.js
-│   └── tsconfig.json
-│
-├── backend/                         # Python · FastAPI · Pydantic · Uvicorn
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── v1/
-│   │   │       ├── router.py        # Aggregates v1 endpoints
-│   │   │       └── endpoints/
-│   │   │           ├── health.py    # GET /api/v1/health
-│   │   │           ├── capabilities.py # GET /api/v1/capabilities
-│   │   │           └── analyze.py   # POST /api/v1/analyze/github & /upload
-│   │   ├── core/
-│   │   │   ├── errors.py            # AppError hierarchy + exception handlers
-│   │   │   └── logging_config.py    # Structured logging setup
-│   │   ├── schemas/
-│   │   │   ├── common.py            # ErrorResponse
-│   │   │   ├── health.py            # HealthResponse
-│   │   │   ├── capabilities.py      # CapabilitiesResponse, Capability
-│   │   │   ├── analysis.py          # AnalysisResponse, RepositoryInventory
-│   │   │   └── architecture.py      # ArchitectureModel, ArchitectureNode, Edge, Workflow
-│   │   ├── services/
-│   │   │   ├── repository/          # Safe repository ingestion & sandboxing
-│   │   │   │   ├── safe_extract.py  # Zip-Slip protection, size limits, symlink filter
-│   │   │   │   ├── github_clone.py  # Shallow git clone with hook execution suppression
-│   │   │   │   └── workspace.py     # Isolated temporary sandboxes
-│   │   │   ├── analysis/            # Deterministic code inventory engine
-│   │   │   │   └── inventory.py     # AST/regex & manifest parsing
-│   │   │   ├── architecture/        # Architecture model & workflow builder
-│   │   │   │   └── builder.py       # Graph nodes, relationship edges, and workflow steps
-│   │   │   ├── llm/                 # Azure OpenAI client (GPT-4.1 / GPT-6 Astra)
-│   │   │   │   └── client.py        # Evidence-grounded architecture reasoning with fallback
-│   │   │   ├── threat_model/        # Planned: evidence-linked threat findings (Milestone 4)
-│   │   │   └── reporting/           # Planned: ReportLab PDF generation (Milestone 5)
-│   │   ├── main.py                  # FastAPI app, CORS, exception handlers
-│   │   └── config.py                # Pydantic Settings (all env vars)
-│   ├── tests/
-│   │   ├── conftest.py
-│   │   ├── test_health.py
-│   │   ├── test_capabilities.py
-│   │   ├── test_config.py
-│   │   ├── test_safe_extract.py     # Zip-Slip, size bomb, and sanitization tests
-│   │   ├── test_github_clone.py     # URL validation and clone security tests
-│   │   ├── test_analysis.py         # Deterministic fixture analysis tests
-│   │   ├── test_architecture.py     # Graph nodes, edges, and workflow builder tests
-│   │   ├── test_llm_client.py       # Dual-model routing and fallback tests
-│   │   └── test_api_analyze.py      # Endpoints integration tests
-│   ├── requirements.txt
-│   └── .env.example
-│
-├── .gitignore
-└── README.md
-```
-
----
-
-## How to Analyze Any Public GitHub Repository
-
-You can enter any public GitHub repository URL (e.g. `https://github.com/fastapi/fastapi` or `https://github.com/pallets/flask`) into the **Overview** dashboard and immediately get:
-1. **Repository Inventory:** Languages breakdown, frameworks, entry points, detected HTTP endpoints, database drivers, and authentication mechanisms.
-2. **Architecture Map:** An interactive component node graph (Client, Services, Database, Auth, Infra) rendered with React Flow, with zoom/pan and a component inspection panel.
-3. **Workflow Pipelines:** Step-by-step visual execution paths for HTTP ingress, authentication challenges, and CI/CD pipelines with source citations.
-4. **Architectural Explanation:** Evidence-grounded narrative produced by Azure OpenAI (or the built-in deterministic synthesizer if Azure keys are not yet configured).
-
----
-
-## Startup Instructions
-
-### 1. Start Backend Server
 ```powershell
 cd backend
-.venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload --port 8000
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+cd workers/typescript
+npm ci --ignore-scripts --no-audit --no-fund
+cd ../..
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
-- API is available at `http://localhost:8000`
-- Interactive Swagger docs: `http://localhost:8000/docs`
 
-### 2. Start Frontend Dev Server
+In another terminal, from the project root:
+
 ```powershell
 cd frontend
-npm run dev
-# or: pnpm dev
-```
-- Open `http://localhost:5173` in your browser.
-
----
-
-## Running Automated Tests
-
-```bash
-cd backend
-.venv\Scripts\activate
-pytest tests/ -v
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run dev --host 127.0.0.1
 ```
 
-### Frontend Build & Type-Check
-```bash
+Open the Vite address printed in that terminal (normally `http://127.0.0.1:5173`). The development proxy sends `/api` to `127.0.0.1:8000`. API documentation: `http://127.0.0.1:8000/docs`.
+
+For another local backend port, set `REPO_INTELLIGENCE_API` before starting Vite. For development reload, restrict watched directories to trusted application source. Extracted client snapshots use OS temporary directories outside the project tree.
+
+No provider settings are required. Defaults place local results in `data/analysis.sqlite`; optional backend settings are in `backend/.env.example`. Keep the API on loopback with one worker process. The queue is not designed for multiple uvicorn workers.
+
+## Architecture exploration
+
+The default diagram shows major modules, source boundaries and integration groups. Use the explorer to move from repository to packages, modules, and functions/classes. System architecture stays abstract; Core workflow follows a selected source entry. Evidence and scoped unresolved references are available separately from detailed compiler diagnostics.
+
+See the [usability implementation and reconciled tool audit](docs/implementation/architecture-usability.md). Browser checks over the saved GitDiagram graph are in `scripts/verify_exploration.cjs`; `scripts/verify_ui.cjs` also retains the ZIP-upload regression. Set `APP_URL` to the running frontend address (the current preview is port 5175). These checks use the existing snapshot and local Playwright/Chrome environment described below.
+
+## Use
+
+1. Enter a root public GitHub URL or upload a ZIP without vendored dependencies/build outputs. Progress and cancellation appear in the sidebar.
+2. Open a saved snapshot. The system view offers source boundaries/usage, infrastructure declarations, or both layers.
+3. Switch to core workflow, choose an entry, and adjust depth/node budget. Nested definitions and dependencies are optional and distinct from calls.
+4. Select a component or connection for file/line/hash evidence. Select a function and choose **Explore calls from this function** to drill down.
+5. Review coverage and paginated unresolved relationships. A missing arrow is not proof that no relationship exists.
+
+The UI renders backend projections. ELK computes node positions and orthogonal edge routing in a browser Web Worker; React Flow provides zoom, pan and selection. The browser does not infer relationships.
+
+## Structure
+
+```text
+backend/app/
+  api/             HTTP endpoints and response contracts
+  ingestion/       public GitHub archive acquisition, safe ZIP extraction, snapshots
+  analysis/        Python orchestration and narrow configuration adapters
+  evidence/        source validation and limited metadata redaction
+  graph/           system/workflow projections from the same graph
+  persistence/     SQLite jobs and canonical graph storage
+  contracts.py     worker/API Pydantic models
+  jobs.py          bounded local execution queue
+backend/workers/typescript/
+  index.cjs        trusted TypeScript Compiler API analysis
+  adapters/        Next, Express and Wrangler rules
+  guard.cjs        worker API guard (not an OS sandbox)
+frontend/src/
+  components/{repository,diagrams,evidence}/
+  hooks/           submission/job/snapshot state
+  pages/           architecture workspace and filters
+  services/        typed API client
+shared/            frontend contracts and generated backend JSON/OpenAPI schemas
+samples/           static fixtures; never install or execute them
+scripts/           contract generation, CLI and acceptance checks
+backend/tests/     compiler, framework, ingestion and API regressions
+docs/implementation/  audit, handover, tool matrix and limitations
+```
+
+`data/`, `tmp/` and `output/` contain private/generated state and are ignored by Git. Historical research/POC outputs in `output/` are retained as artifacts; the obsolete second POC runtime and static-public graph have been removed.
+
+## Verify
+
+From the project root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pytest backend/tests -q
+.\backend\.venv\Scripts\python.exe scripts/export_contracts.py --check
+.\backend\.venv\Scripts\python.exe scripts/tool_status.py
 cd frontend
-npx tsc --noEmit
-npx vite build
+pnpm run build
+pnpm run format:check
 ```
 
----
+Regenerate schemas with `scripts/export_contracts.py` after backend contract changes. TypeScript definitions are centralized in `shared/contracts/analysis.ts`; JSON/OpenAPI schemas are generated from backend models. Keep both in review when changing an API contract.
 
-## Implementation Status
+For live API checks: `scripts/verify_live.py --source <public-test-repo-folder> --github https://github.com/octocat/Hello-World` packages the folder and submits it through the real ZIP API. `scripts/verify_ui.cjs` uses Playwright from `PLAYWRIGHT_MODULE` (or an installed `playwright` package) and local Chrome; it expects the GitDiagram acceptance snapshot and `tmp/known-system.zip`. See the [implementation handover](docs/implementation/handover.md) for exact verification scope and artifacts.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| FastAPI shell & health check | ✅ Implemented | Production-ready with centralized config |
-| Dynamic capabilities discovery | ✅ Implemented | Distinguishes implemented vs. planned |
-| Safe GitHub Repository Ingest | ✅ Implemented | Depth=1, hook suppression, URL validation |
-| Safe ZIP Archive Ingest | ✅ Implemented | Zip-Slip traversal protection & size bomb checks |
-| Deterministic Code Inventory | ✅ Implemented | Languages, manifests, deps, routes, DB, auth |
-| Architecture Graph & React Flow | ✅ Implemented | Interactive nodes, edges, and inspector drawer |
-| Workflow Sequence Pipeline | ✅ Implemented | Request, auth, and CI/CD execution steps |
-| Azure OpenAI Integration | ✅ Implemented | GPT-4.1 default + Astra escalation + fallback |
-| Automated Backend Tests | ✅ Implemented | 30/30 Pytest tests passing |
-| Frontend Shell & Build | ✅ Implemented | Strict TypeScript & Vite build passing |
-| Threat Model Engine | 🔲 Planned (Milestone 4) | Evidence-linked findings & SDLC recommendations |
-| PDF Report Export | 🔲 Planned (Milestone 5) | ReportLab PDF generator |
+Optional tools such as Syft, Semgrep and Gitleaks are not prerequisites. Their actual installed/integrated status is recorded in the handover; package inventory is currently manifest-based, not a complete SBOM.

@@ -1,0 +1,54 @@
+{
+  "additionalProperties": true,
+  "properties": {
+    "column": {
+      "minimum": 1,
+      "title": "Column",
+      "type": "integer"
+    },
+    "end": {
+      "minimum": 0,
+      "title": "End",
+      "type": "integer"
+    },
+    "file": {
+      "title": "File",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "line": {
+      "minimum": 1,
+      "title": "Line",
+      "type": "integer"
+    },
+    "rule": {
+      "title": "Rule",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    },
+    "start": {
+      "minimum": 0,
+      "title": "Start",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "file",
+    "start",
+    "end",
+    "line",
+    "column",
+    "sha256",
+    "rule"
+  ],
+  "title": "Evidence",
+  "type": "object"
+}

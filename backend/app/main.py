@@ -1,50 +1,36 @@
-"""
-Repo Intelligence — FastAPI application entry point.
-"""
-
-from __future__ import annotations
-
-import logging
-
-from fastapi import FastAPI, Request
+"""Local API: queued intake, saved snapshots and bounded graph projections."""
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from app.config import Settings, get_settings
+from app.jobs import Jobs
+from app.persistence.store import Store
+from app.api.routes import register_routes
 
-from app.api.v1.router import router as v1_router
-from app.config import get_settings
-from app.core.errors import AppError, app_error_handler, unhandled_error_handler
-from app.core.logging_config import configure_logging
 
-settings = get_settings()
-configure_logging(settings.log_level)
+def create_app(settings: Settings | None = None):
+    settings = settings or get_settings()
+    data = settings.data_dir.resolve()
 
-logger = logging.getLogger(__name__)
+    @asynccontextmanager
+    async def lifespan(app):
+        data.mkdir(parents=True, exist_ok=True)
+        app.state.store = Store(data / 'analysis.sqlite')
+        app.state.store.recover()
+        app.state.jobs = Jobs(app.state.store, data)
+        try:
+            yield
+        finally:
+            app.state.jobs.shutdown()
 
-app = FastAPI(
-    title="Repo Intelligence API",
-    description=(
-        "AI-assisted repository intelligence platform. "
-        "Analyses software repositories for architecture and security insights."
-    ),
-    version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
+    app = FastAPI(title='Repo Intelligence', version='1.0.0', lifespan=lifespan,
+                  description='Deterministic local TypeScript/JavaScript repository analysis')
+    app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins.split(','),
+                       allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 
-# ── CORS ─────────────────────────────────────────────────────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.parsed_allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    register_routes(app, data)
 
-# ── Exception handlers ────────────────────────────────────────────────────────
-app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
-app.add_exception_handler(Exception, unhandled_error_handler)  # type: ignore[arg-type]
+    return app
 
-# ── Routers ───────────────────────────────────────────────────────────────────
-app.include_router(v1_router)
 
-logger.info("Repo Intelligence API initialised (env=%s)", settings.app_env)
+app = create_app()

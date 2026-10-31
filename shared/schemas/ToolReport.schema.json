@@ -1,0 +1,41 @@
+{
+  "properties": {
+    "base_prefix": {
+      "title": "Base Prefix",
+      "type": "string"
+    },
+    "interpreter": {
+      "title": "Interpreter",
+      "type": "string"
+    },
+    "meaning": {
+      "title": "Meaning",
+      "type": "string"
+    },
+    "prefix": {
+      "title": "Prefix",
+      "type": "string"
+    },
+    "syft_role": {
+      "title": "Syft Role",
+      "type": "string"
+    },
+    "tools": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "title": "Tools",
+      "type": "object"
+    }
+  },
+  "required": [
+    "interpreter",
+    "prefix",
+    "base_prefix",
+    "meaning",
+    "syft_role",
+    "tools"
+  ],
+  "title": "ToolReport",
+  "type": "object"
+}

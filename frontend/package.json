@@ -7,18 +7,15 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write src ../shared/contracts",
+    "format:check": "prettier --check src ../shared/contracts"
   },
   "dependencies": {
-    "lucide-react": "^0.460.0",
+    "elkjs": "0.12.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-flow-renderer": "^10.3.17",
-    "react-router-dom": "^6.28.0",
     "reactflow": "^11.11.4"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
@@ -26,6 +23,7 @@
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "prettier": "3.9.10",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
     "vite": "^5.4.11"

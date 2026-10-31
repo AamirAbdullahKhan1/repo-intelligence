@@ -7,8 +7,8 @@ modeled directly after the GitDiagram topology (Next.js, MCP server, workers, Re
 from __future__ import annotations
 
 from pathlib import Path
-from app.services.analysis.inventory import RepositoryAnalyzer
-from app.services.architecture.builder import ArchitectureBuilder
+from app.analysis.pipeline import analyze
+from app.graph.projections import architecture_view
 
 
 def test_synthetic_ts_monorepo_architecture_reconstruction(tmp_path: Path) -> None:
@@ -132,73 +132,16 @@ def test_synthetic_ts_monorepo_architecture_reconstruction(tmp_path: Path) -> No
         "jobs:\n  deploy:\n    runs-on: ubuntu-latest\n"
     )
 
-    # RUN ANALYSIS
-    analyzer = RepositoryAnalyzer(repo_dir, repo_name="gitdiagram-mock", source_type="github")
-    inventory = analyzer.analyze()
-
-    # BUILD ARCHITECTURE V2
-    builder = ArchitectureBuilder(inventory, workspace_dir=repo_dir)
-    arch = builder.build()
-
-    # VERIFY RESULTS
-    # 1. Distinct Components Created (No longer collapsed into 1 service!)
-    node_ids = {n.id for n in arch.nodes}
-    node_labels = {n.label for n in arch.nodes}
-    node_types = {n.type for n in arch.nodes}
-
-    assert "comp-nextjs-app" in node_ids
-    assert "comp-mcp-server" in node_ids
-    assert "comp-worker-render" in node_ids
-    assert "comp-worker-presence" in node_ids
-    assert "comp-worker-errors" in node_ids
-    assert "node-db-redis" in node_ids
-
-    # 2. Component Types Breakdown
-    assert "frontend_app" in node_types
-    assert "mcp_server" in node_types
-    assert "worker" in node_types
-    assert "cache" in node_types
-
-    # 3. Next.js App details
-    nextjs_node = next(n for n in arch.nodes if n.id == "comp-nextjs-app")
-    assert "/api/diagram" in nextjs_node.sub_modules
-    assert "/api/auth" in nextjs_node.sub_modules
-
-    # 4. MCP Server details
-    mcp_node = next(n for n in arch.nodes if n.id == "comp-mcp-server")
-    assert any("render_diagram" in m for m in mcp_node.sub_modules)
-    assert any("get_repo_tree" in m for m in mcp_node.sub_modules)
-
-    # 5. Workers details
-    render_worker = next(n for n in arch.nodes if n.id == "comp-worker-render")
-    assert "HTTP Fetch Handler" in render_worker.sub_modules
-    assert "Queue Consumer" in render_worker.sub_modules
-
-    # 6. Fine-grained relationship edges: READS_FROM and WRITES_TO on Redis!
-    edge_types = {e.relationship_type for e in arch.edges}
-    assert "READS_FROM" in edge_types
-    assert "WRITES_TO" in edge_types
-    assert "HANDLES_ROUTE" in edge_types
-
-    redis_edges = [e for e in arch.edges if e.target == "node-db-redis"]
-    assert len(redis_edges) >= 2
-    read_edge = next(e for e in redis_edges if e.relationship_type == "READS_FROM")
-    assert read_edge.confidence == "VERIFIED"
-    assert "app/api/diagram/route.ts" in (read_edge.evidence_file or "")
-
-    # 7. Deployment Architecture View (Phase 4 Separation)
-    assert arch.deployment_view is not None
-    deploy_node_ids = {n.id for n in arch.deployment_view.nodes}
-    assert "deploy-node-source" in deploy_node_ids
-    assert "deploy-node-github-actions" in deploy_node_ids
-    assert "deploy-node-docker" in deploy_node_ids
-
-    deploy_edge_types = {e.relationship_type for e in arch.deployment_view.edges}
-    assert "TRIGGERS_WORKFLOW" in deploy_edge_types
-    assert "DEPLOYED_AS" in deploy_edge_types
-
-    # 8. Workflows
-    wf_ids = {w.id for w in arch.workflows}
-    assert "wf-http-ingress" in wf_ids
-    assert "wf-worker-event" in wf_ids
-    assert "wf-mcp-execution" in wf_ids
+    graph = analyze(repo_dir)
+    labels = {n['label'] for n in graph['entities']}
+    assert {'gitdiagram', '@gitdiagram/shared', '@gitdiagram/worker-render', '@gitdiagram/worker-presence', '@gitdiagram/worker-errors'} <= labels
+    assert {'/api/diagram', '/api/auth'} <= {r['path'] for r in graph['routes']}
+    assert any(e['kind'] == 'HANDLED_BY' for e in graph['edges'])
+    # Missing aliases and undeclared dependency implementations must remain unresolved.
+    assert any(u.get('specifier') == '@/lib/redis' for u in graph['unknowns'])
+    assert not any(e['kind'] in ('READS_FROM', 'WRITES_TO') for e in graph['edges'])
+    assert not any(n['kind'] == 'storage' for n in graph['entities'])
+    system = architecture_view(graph)
+    workflow = architecture_view(graph, 'workflow')
+    assert system['snapshot_id'] == workflow['snapshot_id']
+    assert any(e['kind'] == 'HANDLED_BY' for e in workflow['edges'])

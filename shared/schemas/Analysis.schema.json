@@ -1,0 +1,72 @@
+{
+  "properties": {
+    "counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Counts",
+      "type": "object"
+    },
+    "coverage": {
+      "title": "Coverage",
+      "type": "object"
+    },
+    "created_at": {
+      "title": "Created At",
+      "type": "string"
+    },
+    "diagnostics": {
+      "items": {
+        "type": "object"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "inventory": {
+      "title": "Inventory",
+      "type": "object"
+    },
+    "provenance": {
+      "title": "Provenance",
+      "type": "object"
+    },
+    "repository": {
+      "title": "Repository",
+      "type": "string"
+    },
+    "scope": {
+      "title": "Scope",
+      "type": "object"
+    },
+    "snapshot_id": {
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "tools": {
+      "title": "Tools",
+      "type": "object"
+    },
+    "unknown_counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Unknown Counts",
+      "type": "object"
+    }
+  },
+  "required": [
+    "snapshot_id",
+    "repository",
+    "created_at",
+    "provenance",
+    "coverage",
+    "counts",
+    "unknown_counts",
+    "scope",
+    "tools",
+    "inventory",
+    "diagnostics"
+  ],
+  "title": "Analysis",
+  "type": "object"
+}

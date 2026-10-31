@@ -1,0 +1,158 @@
+{
+  "$defs": {
+    "Entity": {
+      "additionalProperties": true,
+      "properties": {
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "label"
+      ],
+      "title": "Entity",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "coverage": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Coverage",
+      "type": "object"
+    },
+    "entry_point_count": {
+      "title": "Entry Point Count",
+      "type": "integer"
+    },
+    "frameworks": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Frameworks",
+      "type": "array"
+    },
+    "infrastructure_count": {
+      "title": "Infrastructure Count",
+      "type": "integer"
+    },
+    "integration_count": {
+      "title": "Integration Count",
+      "type": "integer"
+    },
+    "integrations": {
+      "items": {
+        "$ref": "#/$defs/Entity"
+      },
+      "maxItems": 30,
+      "title": "Integrations",
+      "type": "array"
+    },
+    "languages": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Languages",
+      "type": "object"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "module_count": {
+      "title": "Module Count",
+      "type": "integer"
+    },
+    "package_count": {
+      "title": "Package Count",
+      "type": "integer"
+    },
+    "packages": {
+      "items": {
+        "$ref": "#/$defs/Entity"
+      },
+      "maxItems": 20,
+      "title": "Packages",
+      "type": "array"
+    },
+    "packages_truncated": {
+      "title": "Packages Truncated",
+      "type": "boolean"
+    },
+    "relationship_statuses": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Relationship Statuses",
+      "type": "object"
+    },
+    "snapshot_id": {
+      "title": "Snapshot Id",
+      "type": "string"
+    },
+    "storage": {
+      "items": {
+        "$ref": "#/$defs/Entity"
+      },
+      "maxItems": 30,
+      "title": "Storage",
+      "type": "array"
+    },
+    "storage_count": {
+      "title": "Storage Count",
+      "type": "integer"
+    },
+    "supported_relationships": {
+      "title": "Supported Relationships",
+      "type": "integer"
+    },
+    "unresolved_references": {
+      "title": "Unresolved References",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "snapshot_id",
+    "languages",
+    "frameworks",
+    "packages",
+    "package_count",
+    "packages_truncated",
+    "module_count",
+    "entry_point_count",
+    "integrations",
+    "storage",
+    "integration_count",
+    "storage_count",
+    "infrastructure_count",
+    "supported_relationships",
+    "unresolved_references",
+    "relationship_statuses",
+    "coverage",
+    "limitations"
+  ],
+  "title": "RepositoryOverview",
+  "type": "object"
+}

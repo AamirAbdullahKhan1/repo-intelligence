@@ -1,0 +1,9 @@
+flowchart TD
+ A["Source dependency extraction upstream; not reproduced"] --> B["Dependency CSV/model records and optional ground truth"]
+ B --> C["Preprocessing and file graph construction"]
+ C --> D["Optional folder relations and typed dependencies"]
+ D --> E["Learned embeddings: walks or graph neural models"]
+ E --> F["KMeans or agglomerative module partition"]
+ F --> G["Assignments and stage/runtime outputs"]
+ H["Reference architecture"] --> I["MoJoFM, a2a, c2c, ARI and modularity evaluation"]
+ F --> I

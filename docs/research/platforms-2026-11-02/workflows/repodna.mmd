@@ -1,0 +1,11 @@
+flowchart TD
+ A["GitHub revision: public web path"] --> B["Durable workflow and commit artifact cache"]
+ B --> C["Archive or bounded Git-tree acquisition"]
+ D["Browser ZIP or folder"] --> E["Browser analysis worker"]
+ C --> F["analyzeRepositoryFiles: fingerprint and syntax extraction"]
+ E --> F
+ F --> G["Custom imports and name-based call resolution"]
+ G --> H["Role buckets, import aggregation and bounded static flows"]
+ H --> I["v1-to-v2 adaptation, analytics and artifact compaction"]
+ I --> J["Validated artifact: React Flow, evidence and exports"]
+ K["Separate Python CLI: AST/regex and file parse cache"] -. "different engine; same product" .-> H

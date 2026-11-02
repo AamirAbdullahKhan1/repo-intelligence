@@ -1,0 +1,8 @@
+flowchart TD
+ A["Source path and selected frontend configuration"] --> B["Language frontend / trusted AST generator"]
+ B --> C["AST creation and metadata/import/dependency passes"]
+ C --> D["Base, control-flow, type and call-graph overlays"]
+ D --> E["Optional reaching-definition/data-flow overlay"]
+ E --> F["CPG with applied-layer metadata; Flatgraph storage"]
+ F --> G["CPGQL traversal, flow paths and exports"]
+ G -.-> H["Application architecture requires additional custom rules"]

@@ -35,6 +35,8 @@ This is a local, single-user development MVP. It is **not ready to accept hostil
 
 ## Analysis limits
 
+Foundation fixes on 2 November 2026: `public/`, `scripts/` and `plugins/` no longer cause blanket source exclusion. They are source candidates, not proven production entry points. Explicit test/documentation/experimental and generated/vendor exclusions remain visible in coverage. Literal URL following rejects written/redeclared variables and dynamic scope instead of trusting stale initializers; it is not full reaching-definitions analysis. Next root/nested App Router files are matched relative to their owning package. See [foundation fixes](foundation-fixes.md).
+
 Support is TS/JS only. Current project awareness uses the root tsconfig's path aliases and a supplied-source compiler host. Full `extends`, project references, nested compiler configurations, installed external declarations, generated OpenNext code and build-time transformations are not reconstructed.
 
 Next app-route exports, a narrow bound-receiver Express adapter, Wrangler JSON/JSONC declarations and narrow Docker Compose YAML declarations are implemented. Express mount prefixes/middleware execution and broader frameworks are incomplete. Wrangler TOML, Kubernetes, Terraform and a generic YAML architecture interpreter are not implemented. Compose `depends_on` establishes a declaration about startup ordering, not traffic or database use.

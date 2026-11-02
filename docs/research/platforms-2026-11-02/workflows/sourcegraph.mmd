@@ -1,0 +1,8 @@
+flowchart TD
+ A["Repository and project/dependency context"] --> B["Language indexer: CI or executor"]
+ B --> C["SCIP index: documents, symbols, occurrences and relationships"]
+ C --> D["Upload and server index processing: documented"]
+ D --> E["Definitions, references and implementations"]
+ F["Search-based navigation"] -. "fallback" .-> E
+ B -.-> U["Indexer install/build behavior varies; must qualify"]
+ E -.-> G["Architecture semantics are outside this navigation pipeline"]

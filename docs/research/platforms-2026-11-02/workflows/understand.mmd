@@ -1,0 +1,9 @@
+flowchart TD
+ A["Source project plus language/compiler settings"] --> B["Language-specific parsing: documented"]
+ B --> C["Parsed entities and located references"]
+ C --> D["Reusable project analysis database"]
+ D --> E["Reference filtering and parent/group aggregation"]
+ E --> F["Calls, dependencies, matrix and source navigation"]
+ G["Automatic, plugin or user architecture grouping"] --> E
+ D --> H["Version comparison and potential-impact traversal"]
+ B -.-> U["Proprietary resolver and storage algorithms: unknown"]

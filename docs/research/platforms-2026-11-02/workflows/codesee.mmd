@@ -1,0 +1,653 @@
+flowchart TD
+ A["GitHub installation and repository access: documented"] --> B["Dependency extraction engine: implementation unknown"]
+ B --> C["Codebase file/folder dependency map"]
+ C --> D["Collapse, focus, annotations, insights and source navigation"]
+ E["Pull request and later commits"] --> F["Review Map: changed and dependent files"]
+ B --> F
+ F --> G["Review tours and potential-impact exploration"]
+ H["Enterprise Service Map advertised"] -.-> U["Service extraction and reconciliation: unknown"]
+# Research Assignment: Deep Technical Analysis of Existing Repository Intelligence & Architecture Reconstruction Platforms
+
+## 1. Objective
+
+We are developing a **Repository Intelligence and Architecture Reconstruction Platform**.
+
+The goal is to analyze a software repository without executing its application code and reconstruct its internal structure, architecture, dependencies, routes, important functions, data stores, external integrations, and execution relationships.
+
+We want to investigate existing platforms and open-source projects that solve some or all of these problems.
+
+This is not a superficial competitor analysis. We need to understand how these systems actually work internally, how they process repositories, what analysis techniques they use, how they construct graphs, and how they translate extracted information into meaningful architecture representations.
+
+Our primary inspiration is **RepoDNA**. We want to understand its implementation in particular, but we should not blindly reproduce its design. The objective is to learn from its architecture, identify its limitations, and determine how we could build a more capable and reliable system.
+
+## 2. Projects and Platforms to Investigate
+
+Investigate the following projects individually.
+
+### A. RepoDNA
+GitHub: https://github.com/AnasBabari/RepoDNA
+
+**Priority: Highest**
+
+This project is particularly close to our current vision.
+
+Investigate:
+
+- Repository ingestion and source discovery.
+- How it identifies programming languages and frameworks.
+- How it parses source code without executing it.
+- Whether it uses ASTs, compiler APIs, custom parsers, regex, or other techniques.
+- How it identifies files, modules, functions, classes, symbols, routes, databases, and external services.
+- How it resolves imports and cross-file relationships.
+- How it identifies function calls and execution paths.
+- How it discovers application entry points.
+- How it identifies frontend, backend, shared, infrastructure, and other architectural layers.
+- How it identifies database integrations and external API calls.
+- How it constructs its internal graph.
+- How it represents relationships between graph entities.
+- How architecture layers and higher-level components are derived from low-level source information.
+- How its execution tracing works.
+- How impact analysis works.
+- How interactive exploration is implemented.
+- How it handles unresolved references, ambiguous relationships, and unsupported language constructs.
+- Whether it supports incremental analysis or reprocesses the repository.
+- How it handles large repositories and performance.
+
+**Important:** Inspect the actual GitHub source code. Do not rely exclusively on the README, screenshots, or live web application.
+
+Trace the main execution path from repository submission to final architecture visualization.
+
+Identify the actual files, functions, classes, and modules responsible for each major stage.
+
+### B. SciTools Understand
+Official website: https://scitools.com/understand/
+
+Documentation: https://docs.scitools.com/help/
+
+**Priority: Very High**
+
+Understand is a mature static code analysis and code-comprehension platform.
+
+Investigate:
+
+- How it parses source code across multiple programming languages.
+- How it creates its internal project database.
+- How it identifies functions, classes, variables, types, references, and dependencies.
+- How it resolves cross-file references.
+- How it generates call graphs.
+- How it generates dependency graphs.
+- How it supports caller/callee exploration.
+- How it performs impact analysis.
+- How it identifies module-level dependencies and architectural violations.
+- How it handles incomplete or non-compiling projects.
+- How it supports projects without requiring a successful build.
+- How its architecture views are generated from the underlying parsed model.
+- How it stores and indexes code relationships.
+- How it supports custom analysis and automation.
+
+Understand is commercial, so its internal implementation may not be publicly available.
+
+Where source code is unavailable, investigate official technical documentation, API documentation, product demonstrations, and published technical material.
+
+Clearly separate verified implementation details from educated assumptions.
+
+We are particularly interested in its **single parsed model supporting multiple graph views** approach.
+
+### C. Joern
+GitHub: https://github.com/joernio/joern
+
+Documentation: https://docs.joern.io/
+
+**Priority: Very High**
+
+Joern is an important reference for understanding how source code can be represented as a rich graph.
+
+Investigate:
+
+- What a Code Property Graph (CPG) is.
+- How Joern parses source code.
+- How language-specific frontends work.
+- How AST, control-flow, and data-flow information are represented.
+- How different representations are combined into a common graph.
+- How nodes and relationships are defined.
+- How graph overlays work.
+- How it supports cross-language analysis.
+- How it handles symbols, methods, calls, variables, and control structures.
+- How graph traversal and queries work.
+- How data-flow and taint analysis are performed.
+- How custom analysis passes can extend the graph.
+- How the graph is stored and queried.
+- How its architecture supports large-scale analysis.
+
+Investigate the actual repository structure, frontend implementations, CPG specification, and documentation.
+
+We do not necessarily want to adopt a complete CPG implementation.
+
+Instead, determine which ideas could improve our existing canonical graph, particularly:
+
+- Richer node types.
+- Typed relationships.
+- Multiple abstraction levels.
+- Better source-level evidence.
+- Cross-file relationship resolution.
+- Data-flow representation.
+- Queryable graph projections.
+
+### D. CodeSee
+Documentation: https://docs.codesee.io/
+
+**Priority: High**
+
+CodeSee is particularly relevant to the user experience and interactive exploration of codebases.
+
+Investigate:
+
+- How repositories are converted into codebase maps.
+- How file and folder dependencies are identified.
+- How dependency relationships are visualized.
+- How folders and modules are grouped.
+- How users expand and collapse parts of a codebase.
+- How users select files and explore dependencies.
+- How annotations, ownership, and insights are represented.
+- How it supports change-impact exploration and pull-request review maps.
+- How it manages large diagrams and visual complexity.
+- How users navigate from architecture elements to actual source files.
+
+Focus on the interaction model and the relationship between the underlying dependency information and the visual representation.
+
+Do not assume that an editable visual map means the platform has reconstructed complete runtime architecture.
+
+### E. GitDiagram
+Website: https://gitdiagram.com/
+
+GitHub: https://github.com/ahmedkhaleel2004/gitdiagram
+
+**Priority: High**
+
+GitDiagram is useful for understanding a different approach to repository architecture visualization.
+
+Investigate:
+
+- How it ingests GitHub repositories.
+- What repository information it retrieves.
+- How it selects source files for analysis.
+- Whether it analyzes the entire repository or only a subset.
+- How it uses AI to interpret repository structure.
+- How it generates architecture components and relationships.
+- How it validates generated file paths.
+- How it converts the resulting information into Mermaid diagrams.
+- How it handles diagram size and component limits.
+- How repository results are stored or cached.
+- How users interact with the generated diagram.
+
+Pay particular attention to its limitations compared with deterministic static analysis.
+
+We want to understand which problems it solves through AI-based interpretation and which problems require actual source-level relationship resolution.
+
+### F. Sourcegraph Code Intelligence
+Documentation: https://sourcegraph.com/docs
+
+**Priority: Medium**
+
+Investigate its code navigation and indexing architecture.
+
+Focus on:
+
+- SCIP and LSIF.
+- Symbol indexing.
+- Definition and reference resolution.
+- Cross-file navigation.
+- How code intelligence data is generated.
+- How indexes are stored and consumed.
+- How it handles large repositories.
+- Whether indexing depends on build environments or project configuration.
+- Which parts of its architecture could be useful for our symbol-resolution and reference-resolution stages.
+
+Do not treat Sourcegraph as a direct architecture reconstruction competitor. We are studying its code intelligence techniques.
+
+### G. StructSAR and Related Architecture Recovery Research
+Investigate the StructSAR research project and related academic work on recovering software architecture from source-code dependency graphs.
+
+Focus on:
+
+- How low-level dependencies are converted into higher-level modules.
+- How clustering is used for architectural recovery.
+- How module boundaries are identified.
+- How architectural relationships are inferred.
+- How the recovered architecture is evaluated.
+- What accuracy metrics are used.
+- How the approach handles large and complex repositories.
+
+Look for additional relevant academic research if necessary, but keep the investigation focused on source-code architecture recovery.
+
+---
+
+## 3. Required Investigation Methodology
+
+For every project, follow the same investigation structure.
+
+### Stage 1: Understand the Product
+
+Explain:
+
+1. What problem does the project solve?
+2. What are its primary capabilities?
+3. What type of users is it designed for?
+4. What is its expected input?
+5. What does it generate as output?
+6. What are its major limitations?
+
+Keep the explanation technically accurate but understandable.
+
+### Stage 2: Reconstruct the Internal Workflow
+
+This is the most important part.
+
+Trace the complete workflow:
+
+**Repository Input → Ingestion → File Discovery → Language Detection → Parsing → Extraction → Relationship Resolution → Graph Construction → Architecture Interpretation → Visualization**
+
+This is an investigation framework, not an assumption that every project follows these exact stages.
+
+For each actual stage, identify:
+
+- What happens?
+- Which component performs it?
+- Which tools, libraries, or algorithms are used?
+- What information is received?
+- What information is generated?
+- What happens when information cannot be resolved?
+- What are the limitations?
+
+Where possible, identify actual source files, functions, classes, APIs, and data structures.
+
+### Stage 3: Understand the Analysis Engine
+
+Investigate the actual techniques used to extract information from source code.
+
+For example:
+
+- AST parsing.
+- Compiler APIs.
+- Symbol tables.
+- Import resolution.
+- Cross-file reference resolution.
+- Call graph construction.
+- Static data-flow analysis.
+- Configuration parsing.
+- Framework-specific semantic analysis.
+- Dependency graph construction.
+- Module clustering.
+- Architecture inference.
+
+Do not merely list these technologies.
+
+Explain how they are used and what information each technique can reliably recover.
+
+For example, explain the difference between:
+
+- Finding an import statement.
+- Resolving the imported module.
+- Identifying a function call.
+- Resolving the call to a local implementation.
+- Determining that the function is part of an application workflow.
+
+These are different levels of analysis.
+
+### Stage 4: Understand the Graph Model
+
+For projects that use graph-based representations, investigate:
+
+- Node types.
+- Relationship types.
+- Node identity.
+- Relationship identity.
+- Graph storage.
+- Evidence representation.
+- Abstraction levels.
+- Graph traversal.
+- Graph queries.
+- Graph projections.
+- How low-level code relationships become higher-level architecture relationships.
+
+Provide examples where possible.
+
+For instance:
+
+`Route → Controller → Service → Database`
+
+Explain whether the platform actually establishes each relationship through static evidence, configuration evidence, conventions, or inference.
+
+Do not invent relationships merely to make an example look complete.
+
+### Stage 5: Understand Architecture Reconstruction
+
+This is a particularly important area.
+
+Investigate how each project moves from code-level information to architectural concepts.
+
+Questions to answer:
+
+- How does it identify application boundaries?
+- How does it distinguish a module from a service?
+- How does it identify frontend and backend boundaries?
+- How does it identify shared modules?
+- How does it identify external systems?
+- How does it identify databases?
+- How does it recognize API routes?
+- How does it identify deployment boundaries?
+- How does it group hundreds or thousands of source files into readable components?
+- How does it avoid confusing folder structure with actual architecture?
+- How does it handle applications that do not follow conventional framework structures?
+
+If architecture interpretation is heuristic, explain the heuristic and its weaknesses.
+
+### Stage 6: Understand the User Experience
+
+Investigate how each platform presents its results.
+
+Focus on:
+
+- Initial architecture overview.
+- Component selection.
+- Expand/collapse behavior.
+- Caller/callee exploration.
+- Dependency exploration.
+- Source-code navigation.
+- Evidence inspection.
+- Impact analysis.
+- Diagram layout.
+- Handling of large graphs.
+- Filtering and search.
+- Multiple architectural views.
+
+Identify interaction patterns worth adopting.
+
+---
+
+## 4. Comparative Analysis
+
+After completing the individual investigations, prepare a comparison matrix.
+
+Compare all projects across these dimensions:
+
+| Dimension | What to investigate |
+|---|---|
+| Repository ingestion | GitHub, ZIP, local repository |
+| Language support | Supported languages and actual depth |
+| Parsing | AST, compiler APIs, custom parsers |
+| Symbol extraction | Functions, classes, variables, types |
+| Import resolution | Local and external dependencies |
+| Call resolution | Local implementations, external calls, unresolved calls |
+| Data flow | Whether values can be traced across functions |
+| Configuration analysis | Docker, Compose, environment variables, IaC |
+| Framework awareness | Routes, controllers, services, entry points |
+| Database detection | Database declarations and actual usage |
+| External integrations | SDKs, APIs, cloud services |
+| Architecture recovery | How modules and components are identified |
+| Graph model | Nodes, edges, evidence, abstraction levels |
+| Visualization | Architecture maps, call graphs, dependency graphs |
+| Exploration | Progressive expansion and impact analysis |
+| Evidence | File paths, source locations, explanations |
+| Uncertainty | How unresolved relationships are handled |
+| Execution requirements | Whether repository code or build tools are executed |
+| AI dependency | Whether AI is required for core functionality |
+| Scalability | Large repository handling and performance |
+| Extensibility | Custom language/framework providers |
+| Limitations | What it cannot reliably recover |
+
+Use the following labels:
+
+- **Verified:** Confirmed from source code or authoritative documentation.
+- **Documented:** Advertised or described by official project documentation, but not independently verified.
+- **Inferred:** A reasonable interpretation of available evidence.
+- **Unknown:** Insufficient information.
+
+Do not fabricate missing information.
+
+---
+
+## 5. Compare Everything Against Our Existing Platform
+
+We already have an existing implementation. Do not design a completely new system without understanding what we have.
+
+Our current implementation has:
+
+- FastAPI backend.
+- React frontend.
+- React Flow for graph visualization.
+- ELK.js for graph layout.
+- SQLite persistence.
+- Python orchestration and analysis pipeline.
+- A TypeScript/JavaScript analysis worker using the TypeScript Compiler API.
+- Narrow Next.js, Express, and Wrangler adapters.
+- A limited Docker Compose configuration parser.
+- Repository ingestion through GitHub archive downloads and ZIP uploads.
+- A canonical evidence-backed graph.
+- Separate system architecture and workflow projections.
+- Bounded graph exploration.
+- Source evidence, unknowns, and validation.
+- No LLM dependency.
+- No application code execution.
+- No dependency installation or build execution.
+
+The current platform is an MVP, not a complete universal static analysis engine.
+
+It has known limitations involving:
+
+- Incomplete data-flow analysis.
+- Dynamic dispatch and callback resolution.
+- Project references and complex TypeScript configuration.
+- Workspace aliases.
+- Frontend-to-backend API matching.
+- Configuration value propagation.
+- Framework-specific semantic resolution.
+- Broad language coverage.
+- Lack of a labelled accuracy benchmark.
+- Lack of OS-enforced sandboxing and network isolation.
+
+Use these facts as the baseline for comparison.
+
+For every competitor, identify:
+
+1. What they do that we already do.
+2. What they do better.
+3. What they do that we do not currently support.
+4. What they appear to do differently.
+5. Which of their approaches could realistically improve our system.
+6. Which capabilities would require substantial engineering effort.
+7. Which features are not worth adopting.
+
+Avoid suggesting a technology merely because another project uses it.
+
+---
+
+## 6. Identify Opportunities to Improve Our Platform
+
+After the comparison, propose improvements in categories.
+
+### A. Analysis Engine Improvements
+
+Examples to investigate:
+
+- Better TypeScript symbol resolution.
+- Bounded interprocedural data flow.
+- Improved function call resolution.
+- Better callback and dynamic dispatch handling.
+- Improved framework-aware extraction.
+- Better API endpoint matching.
+- Cross-file configuration propagation.
+- Additional language providers.
+
+### B. Canonical Graph Improvements
+
+Investigate:
+
+- Whether our graph needs richer node types.
+- Whether we need more relationship types.
+- Whether evidence and confidence need a better model.
+- Whether multiple abstraction levels should be supported.
+- Whether we need better graph traversal and query capabilities.
+- Whether we should introduce additional semantic overlays.
+
+### C. Architecture Interpretation Improvements
+
+Investigate:
+
+- More reliable module-boundary detection.
+- Better application-layer classification.
+- Service-boundary identification.
+- Shared-module detection.
+- Framework-specific architecture conventions.
+- Dependency-based clustering.
+- Better distinction between declared infrastructure and observed source usage.
+
+### D. Exploration and Visualization Improvements
+
+Investigate:
+
+- Progressive graph expansion.
+- Caller/callee exploration.
+- Impact analysis.
+- Architecture-to-workflow navigation.
+- Evidence-first component exploration.
+- Better filtering and diagram simplification.
+- Multiple views generated from the same canonical graph.
+
+### E. Infrastructure and Scalability
+
+Investigate:
+
+- Whether Docker-based analysis workers would help.
+- Whether separate language providers should be isolated.
+- Whether SQLite is sufficient for our current needs.
+- Whether a graph database is actually necessary.
+- Whether incremental analysis would be beneficial.
+- How large repositories could be processed efficiently.
+
+Do not automatically recommend Neo4j, NetworkX, Docker, or other tools. First establish the specific problem they would solve.
+
+---
+
+## 7. Important Constraints and Design Principles
+
+All recommendations must respect these principles.
+
+1. **Local-first:** Client source code must remain within the analysis environment.
+2. **No AI dependency:** Core architecture extraction and graph construction must work deterministically without an LLM.
+3. **No repository code execution:** Do not execute application code, install dependencies, run builds, or load untrusted project plugins/configuration.
+4. **Evidence-backed relationships:** Important entities and relationships should have traceable source or configuration evidence.
+5. **Typed relationships:** An import, function call, network dependency, startup dependency, and actual API interaction must not be treated as the same relationship.
+6. **Explicit uncertainty:** Unresolved and ambiguous relationships must remain visible rather than being fabricated.
+7. **One canonical graph:** Architecture, workflow, dependency, and exploration views should be derived from the same underlying graph wherever possible.
+8. **Incremental exploration:** Users should be able to investigate a large repository progressively instead of being presented with an overwhelming diagram.
+9. **Honest coverage:** The system must communicate what it analyzed and what it could not determine.
+10. **Practical engineering:** Prefer improvements that can be integrated into our existing modular monolith rather than proposing an unnecessary rewrite.
+
+Security note: Our current MVP does not yet have OS-enforced isolation or complete hostile-upload protection. Do not confuse the no-execution design with a fully sandboxed production environment.
+
+---
+
+## 8. Expected Deliverables
+
+Produce the research in the following order.
+
+### Deliverable 1: Individual Technical Reports
+
+One report per project.
+
+Each report should contain:
+
+- Project overview.
+- Main capabilities.
+- Internal architecture.
+- End-to-end workflow.
+- Analysis techniques.
+- Graph/data model.
+- Architecture reconstruction methodology.
+- Visualization and interaction model.
+- Technology stack.
+- Source-code references or official documentation references.
+- Limitations and unknowns.
+
+RepoDNA should receive the deepest investigation.
+
+### Deliverable 2: Workflow Diagrams
+
+Create a separate workflow diagram for each project.
+
+The diagrams should show the actual or best-supported processing pipeline.
+
+For example:
+
+`Repository → Intake → File Discovery → Parsing → Semantic Extraction → Relationship Resolution → Graph → Architecture Views`
+
+Adapt this to the actual implementation of each project.
+
+Mark unknown stages instead of assuming them.
+
+### Deliverable 3: Comparative Technical Matrix
+
+Compare all projects using the dimensions defined above.
+
+### Deliverable 4: Our Platform vs Existing Solutions
+
+Explain where our current platform stands and which areas have the largest technical gaps.
+
+Be especially careful not to confuse advertised capabilities with verified accuracy.
+
+### Deliverable 5: Improvement Proposal
+
+Prepare a prioritized list:
+
+- **P0:** Critical correctness or architectural improvements.
+- **P1:** High-value capabilities that should follow.
+- **P2:** Valuable but nonessential enhancements.
+- **Deferred:** Features that introduce complexity without a demonstrated need.
+
+For every proposed improvement, explain:
+
+- The problem it solves.
+- The reference project or research behind the idea.
+- How it could fit into our existing architecture.
+- Expected implementation complexity.
+- Dependencies and risks.
+- How we would test whether it actually improves results.
+
+### Deliverable 6: Final Technical Understanding
+
+Conclude with a clear explanation answering:
+
+1. How do these systems actually reconstruct software architecture?
+2. Which techniques are most effective for source-code understanding?
+3. Which techniques are suitable for our no-execution, local-first constraints?
+4. What is RepoDNA doing particularly well?
+5. What can we learn from SciTools Understand and Joern?
+6. What can we learn from CodeSee and GitDiagram?
+7. What should our platform do differently?
+8. What should we build next, and why?
+
+---
+
+## 9. Research Quality Requirements
+
+Please follow these rules throughout the investigation:
+
+- Inspect actual source code wherever it is available.
+- Use official documentation as the primary source for documented behavior.
+- Prefer actual implementation evidence over README claims.
+- Identify source files and functions when explaining implementation details.
+- Include links to relevant files, classes, functions, documentation, and research papers.
+- Do not claim that a product uses a particular algorithm unless evidence supports it.
+- Clearly mark assumptions and unknowns.
+- Do not assume that all products perform complete static analysis.
+- Do not assume that a dependency graph is equivalent to an architecture graph.
+- Do not assume that a function call graph is equivalent to a runtime execution trace.
+- Do not assume that a folder is an architectural service.
+- Do not recommend replacing our existing architecture without demonstrating why.
+
+**Most importantly: do not start implementing anything.**
+
+This assignment is exclusively for research, technical understanding, workflow reconstruction, and design discussion.
+
+We want to finish this exercise with a much clearer understanding of the engineering approaches used by existing platforms, the limitations of those approaches, and the opportunities to make our own repository intelligence platform more accurate, explainable, and useful.

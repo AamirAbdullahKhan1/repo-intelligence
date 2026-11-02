@@ -11,7 +11,7 @@ const digest = s => crypto.createHash('sha256').update(s).digest('hex');
 const id = (kind, key) => `${kind}:${digest(key).slice(0, 20)}`;
 const rel = p => path.relative(root, p).split(path.sep).join('/');
 const contained = p => { const r = path.relative(root, path.resolve(p)); return !r.startsWith('..') && !path.isAbsolute(r); };
-const excluded = new Set(['.git', 'node_modules', '.next', '.open-next', '.open-next-history', '.venv', 'dist', 'build', '__pycache__']);
+const excluded = new Set(['.git', 'node_modules', 'vendor', 'vendors', '.next', '.open-next', '.open-next-history', '.venv', 'dist', 'build', '__pycache__']);
 const inventory = [], skips = [], texts = new Map();
 let bytes = 0;
 function walk(dir) {
@@ -28,8 +28,10 @@ function walk(dir) {
     inventory.push({ path:r, size });
     const relevant = /\.(?:[cm]?[jt]sx?|jsonc?)$/.test(r) || /(?:^|\/)(?:Dockerfile|Procfile)$/.test(r);
     if (!relevant) continue;
-    if (/(?:^|\/)(?:experiments|public|docs|scripts|plugins)(?:\/|$)/.test(r) || /(?:\.test\.|\.spec\.|\.fixture\.|\/__tests__\/|\/test\/|\/test-[^/]+$)/.test(r)) {
-      skips.push({ file:r, reason:'test/tooling/assets scope' }); continue;
+    // Public browser scripts and application plugins/scripts can contain real
+    // implementations. Parse them as candidates; a folder name is not dead-code evidence.
+    if (/(?:^|\/)(?:experiments|docs)(?:\/|$)/.test(r) || /(?:\.test\.|\.spec\.|\.fixture\.|\/__tests__\/|\/test\/|\/test-[^/]+$)/.test(r)) {
+      skips.push({ file:r, reason:'test/documentation/experimental scope' }); continue;
     }
     if (size > LIMITS.fileBytes) { skips.push({file:r, reason:'per-file byte limit'}); continue; }
     bytes += size;
@@ -112,11 +114,18 @@ const options={allowJs:true,checkJs:false,noEmit:true,skipLibCheck:true,types:[]
 // Only explicitly supplied text and trusted compiler standard libraries are visible.
 const libRoot=path.dirname(ts.getDefaultLibFilePath(options));
 const trustedLib=p=>path.dirname(path.resolve(p))===libRoot && /^lib\..*\.d\.ts$/.test(path.basename(p));
+const sourceDirectories=new Set([root]);
+for(const p of texts.keys()) {
+  let dir=path.dirname(p);
+  while(contained(dir)&&!sourceDirectories.has(dir)) {
+    sourceDirectories.add(dir);const parent=path.dirname(dir);if(parent===dir)break;dir=parent;
+  }
+}
 const host=ts.createCompilerHost(options);
 const oldRead=host.readFile;
 host.readFile=p=>texts.get(path.resolve(p)) ?? (trustedLib(p) ? oldRead(p) : undefined);
 host.fileExists=p=>texts.has(path.resolve(p)) || (trustedLib(p)&&fs.existsSync(p));
-host.directoryExists=p=>[...texts.keys()].some(f=>f.startsWith(path.resolve(p)+path.sep)) || path.resolve(p)===libRoot;
+host.directoryExists=p=>sourceDirectories.has(path.resolve(p)) || path.resolve(p)===libRoot;
 host.realpath=p=>path.resolve(p);
 host.getCurrentDirectory=()=>root;
 host.getSourceFile=(p,version)=>{const t=host.readFile(p); return t===undefined ? undefined : ts.createSourceFile(p,t,version,true);};
@@ -124,8 +133,25 @@ host.writeFile=()=>{throw Error('Emission is prohibited');};
 const program=ts.createProgram(files,options,host), checker=program.getTypeChecker();
 const sources=program.getSourceFiles().filter(s=>texts.has(path.resolve(s.fileName)) && files.includes(path.resolve(s.fileName)));
 const importBindings=new Map(), assignments=new Map(), originCache=new Map();
+const writtenSymbols=new Set(), dynamicScopeFiles=new Set();
 function symbol(n) { try { return checker.getSymbolAtLocation(n); } catch {return null;} }
 function unwrap(n) { while(n&&(ts.isAwaitExpression(n)||ts.isParenthesizedExpression(n)||ts.isAsExpression(n)||ts.isNonNullExpression(n)||ts.isTypeAssertionExpression(n))) n=n.expression; return n; }
+// Indexed once in pass one, rather than rescanning the repository for each URL.
+// Reaching definitions are not modeled yet: any write invalidates initializer
+// following, including conditional, captured and destructuring assignments.
+function markWritten(raw) {
+  const n=unwrap(raw); if(!n)return;
+  if(ts.isIdentifier(n)) {const s=symbol(n);if(s)writtenSymbols.add(s);}
+  else if(ts.isArrayLiteralExpression(n))for(const item of n.elements)markWritten(item);
+  else if(ts.isObjectLiteralExpression(n))for(const item of n.properties) {
+    if(ts.isShorthandPropertyAssignment(item)) {
+      const s=checker.getShorthandAssignmentValueSymbol(item)||symbol(item.name);if(s)writtenSymbols.add(s);
+    } else if(ts.isPropertyAssignment(item))markWritten(item.initializer);
+    else if(ts.isSpreadAssignment(item))markWritten(item.expression);
+  }
+  else if(ts.isSpreadElement(n))markWritten(n.expression);
+  else if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.EqualsToken)markWritten(n.left);
+}
 function pkgName(s) { return s.startsWith('@') ? s.split('/').slice(0,2).join('/') : s.split('/')[0]; }
 function declared(p,s) { return !!(p.data.dependencies?.[pkgName(s)] || p.data.devDependencies?.[pkgName(s)]); }
 function isExternal(spec,p) { return !spec.startsWith('.')&&!spec.startsWith('/')&&!Object.keys(options.paths).some(k=>spec.startsWith(k.replace('*',''))) && (declared(p,spec)||spec.startsWith('node:')); }
@@ -146,6 +172,11 @@ for (const sf of sources) {
   const comp=entityMap.get(component(r)); if(!comp.evidence_ids.length) comp.evidence_ids=[ev(sf,sf,'component-membership')];
   if (sf.parseDiagnostics.length) diagnostics.push({file:r,kind:'parse',count:sf.parseDiagnostics.length});
   const visit=n=>{
+    if(ts.isBinaryExpression(n)&&n.operatorToken.kind>=ts.SyntaxKind.FirstAssignment&&n.operatorToken.kind<=ts.SyntaxKind.LastAssignment)markWritten(n.left);
+    if((ts.isPrefixUnaryExpression(n)||ts.isPostfixUnaryExpression(n))&&
+       (n.operator===ts.SyntaxKind.PlusPlusToken||n.operator===ts.SyntaxKind.MinusMinusToken))markWritten(n.operand);
+    if((ts.isForInStatement(n)||ts.isForOfStatement(n))&&!ts.isVariableDeclarationList(n.initializer))markWritten(n.initializer);
+    if(ts.isWithStatement(n)||ts.isCallExpression(n)&&ts.isIdentifier(n.expression)&&n.expression.text==='eval')dynamicScopeFiles.add(sf);
     if(ts.isImportDeclaration(n)&&ts.isStringLiteral(n.moduleSpecifier)) {
       const spec=n.moduleSpecifier.text, support=ev(sf,n,'import-statement'), target=localTarget(spec,sf), external=isExternal(spec,owner(r));
       const bindings=[]; const clause=n.importClause;
@@ -212,11 +243,18 @@ function resolveOrigin(raw,depth=0,seen=new Set()) {
   }
   return null;
 }
-function literal(raw,depth=0) {
+function literal(raw,depth=0,definitions=[]) {
   const n=unwrap(raw);if(!n||depth>5)return null;
   if(ts.isStringLiteralLike(n))return n.text;
-  if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.PlusToken) {const a=literal(n.left,depth+1),b=literal(n.right,depth+1);return a!==null&&b!==null ? a+b : null;}
-  if(ts.isIdentifier(n)){const s=symbol(n);const d=s?.valueDeclaration;if(d&&ts.isVariableDeclaration(d)&&d.initializer)return literal(d.initializer,depth+1);}
+  if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.PlusToken) {const a=literal(n.left,depth+1,definitions),b=literal(n.right,depth+1,definitions);return a!==null&&b!==null ? a+b : null;}
+  if(ts.isIdentifier(n)) {
+    const s=symbol(n), d=s?.valueDeclaration;
+    if(writtenSymbols.has(s)||s?.declarations?.length!==1||dynamicScopeFiles.has(n.getSourceFile()))return null;
+    if(d&&ts.isVariableDeclaration(d)&&d.initializer) {
+      definitions.push(d);
+      return literal(d.initializer,depth+1,definitions);
+    }
+  }
   return null;
 }
 const sdkPackages=new Set(['openai','@anthropic-ai/sdk','@aws-sdk/client-s3','stripe','resend','@modelcontextprotocol/sdk','@cloudflare/containers','pg','redis','@upstash/redis']);
@@ -245,10 +283,10 @@ for(const sf of sources) {
         const decls=symbol(n.expression)?.declarations||[];
         const local=decls.some(d=>texts.has(path.resolve(d.getSourceFile().fileName)));
         if(!local) {
-          const value=literal(n.arguments[0]);
+          const definitions=[], value=literal(n.arguments[0],0,definitions);
           if(value&&/^https?:\/\//i.test(value)) {
-            try {const url=new URL(value);const tid=entity('external_service','host:'+url.hostname,url.hostname,{scope:'external',identity:'literal HTTP host',evidence_ids:[support]});edge(caller,tid,'CALLS_HTTP',[support],{callsite:support,target_scope:'external',derivation:'unshadowed fetch with statically literal absolute URL'});}catch{}
-          } else unknowns.push({kind:'http',file:r,line:sf.getLineAndCharacterOfPosition(n.getStart(sf)).line+1,reason:value?.startsWith('/')?'relative URL; browser/proxy target unresolved':'dynamic URL or config-dependent destination',evidence_ids:[support]});
+            try {const url=new URL(value);const supports=[support,...definitions.map(d=>ev(d.getSourceFile(),d,'literal-value-definition'))];const tid=entity('external_service','host:'+url.hostname,url.hostname,{scope:'external',identity:'literal HTTP host',evidence_ids:supports});edge(caller,tid,'CALLS_HTTP',supports,{callsite:support,target_scope:'external',derivation:'unshadowed fetch with literal or unmodified initializer chain; static destination, not runtime delivery'});}catch{}
+          } else unknowns.push({kind:'http',file:r,line:sf.getLineAndCharacterOfPosition(n.getStart(sf)).line+1,reason:value?.startsWith('/')?'relative URL; browser/proxy target unresolved':'dynamic, reassigned or config-dependent destination; value flow not established',evidence_ids:[support]});
         }
       }
     }
@@ -262,8 +300,8 @@ const analyzerHash=digest([__filename,path.join(__dirname,'guard.cjs'),...fs.rea
 const result={schema_version:'repo-intelligence-1',repository:path.basename(root),source_snapshot_id:snapshot,analyzer_sha256:analyzerHash,
   snapshot_id:digest(snapshot+ts.version+analyzerHash),typescript_version:ts.version,
   languages:inventory.reduce((a,f)=>{const ext=path.extname(f.path).toLowerCase()||'<none>';a[ext]=(a[ext]||0)+1;return a;},{}),
-  scope:{production_source:true,tests:false,tooling:false,generated:false,dependencies_installed:false,client_code_executed:false,
-    limitation:'Trusted local analyzer; filesystem confinement and heap/deadline limits, not a fully qualified OS sandbox or network-isolation claim'},
+  scope:{production_source:true,tests:false,tooling:true,generated:false,dependencies_installed:false,client_code_executed:false,
+    limitation:'Public, scripts and plugins source candidates are parsed; production reachability is not established. Test, documentation, experimental and generated/vendor exclusions remain. Trusted analyzer guards and heap/deadline limits are not an OS sandbox.'},
   coverage:{inventoried_files:inventory.length,parsed_source_files:sources.length,source_bytes:bytes,syntax_failures:diagnostics.length,...counts,skipped:skips},
   packages:packages.map(p=>({id:p.id,root:p.root,name:p.data.name,dependencies:Object.keys(p.data.dependencies||{}).sort()})),
   entities:entities.sort((a,b)=>a.id.localeCompare(b.id)),edges:edges.sort((a,b)=>a.id.localeCompare(b.id)),evidence:evidence.sort((a,b)=>a.id.localeCompare(b.id)),

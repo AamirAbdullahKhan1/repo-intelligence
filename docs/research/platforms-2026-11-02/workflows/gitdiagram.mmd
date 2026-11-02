@@ -1,0 +1,10 @@
+flowchart TD
+ A["GitHub repository"] --> B["Metadata, tree and README"]
+ B --> C["Bounded integrity-checked source excerpts and references"]
+ C --> D["AI architecture interpretation"]
+ D --> E["Structured groups, nodes, edges and repository paths"]
+ E --> F["Graph/path validation and repair feedback"]
+ F -. "repair" .-> D
+ F --> G["Deterministic graph-to-Mermaid compiler"]
+ G --> H["Browser rendering/sanitization and GitHub links"]
+ F --> I["Persisted artifact for reopening"]

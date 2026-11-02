@@ -1,8 +1,10 @@
 'use strict';
 module.exports = function({ts,r,sf,fid,ev,entity,edge,owner,component,symbolEntity,routes}) {
   // Next convention: registration derived from supplied route modules, no Next build/config execution.
-  if(/(?:^|\/)(?:src\/)?app\/.*\/route\.[jt]s$/.test(r)) {
-    let routePath='/'+r.replace(/^.*?(?:src\/)?app\//,'').replace(/\/route\.[jt]s$/,'').split('/').filter(x=>!/^\(.*\)$/.test(x)&&!x.startsWith('@')).join('/');
+  const pkg=owner(r), local=pkg.root==='.' ? r : r.slice(pkg.root.length+1);
+  const match=/^(?:src\/)?app\/(?:(.*)\/)?route\.[jt]s$/.exec(local);
+  if(match) {
+    const routePath='/'+(match[1]||'').split('/').filter(x=>!/^\(.*\)$/.test(x)&&!x.startsWith('@')).join('/');
     for(const statement of sf.statements) {
       const exported=statement.modifiers?.some(x=>x.kind===ts.SyntaxKind.ExportKeyword);
       const names=ts.isFunctionDeclaration(statement)&&statement.name ? [statement.name.text] : ts.isVariableStatement(statement) ? statement.declarationList.declarations.map(x=>x.name.getText(sf)) : [];

@@ -30,6 +30,13 @@ def validate(graph: dict, root: Path) -> None:
     for node in entities.values():
         if any(i not in evidence for i in node.get('evidence_ids', [])):
             raise ValueError('Dangling node evidence')
+        if node.get('projection_rule') == 'responsibility-v1':
+            if any(i not in entities for i in node.get('members', [])):
+                raise ValueError('Dangling responsibility member')
+    edge_ids = {e['id'] for e in graph['edges']}
+    for record in [*entities.values(), *graph['edges']]:
+        if any(i not in edge_ids for i in record.get('support_edge_ids', [])):
+            raise ValueError('Dangling supporting relationship')
     for edge in graph['edges']:
         if edge['source'] not in entities or edge['target'] not in entities:
             raise ValueError('Dangling graph endpoint')
@@ -38,4 +45,7 @@ def validate(graph: dict, root: Path) -> None:
         if edge['kind'] == 'CALLS' and not entities[edge['target']].get('has_body'):
             raise ValueError('A signature is not an implementation')
     # Semantic support is supplied by the narrow worker rules, not proven by line validity alone.
+    for reference in graph.get('library_references', []):
+        if reference.get('source') not in entities or not reference.get('evidence_ids') or any(i not in evidence for i in reference['evidence_ids']):
+            raise ValueError('Invalid standard-library reference support')
 

@@ -1,3 +1,44 @@
+import type { View } from "../../../shared/contracts/analysis";
+
+// Presentation-only subgraph. Canonical identities and evidence remain unchanged.
+export function overviewPresentation(view: View): View {
+  if (view.metadata.abstraction !== "technical responsibilities") return view;
+  const responsibilities = view.nodes.filter(
+    (n) =>
+      n.projection_rule === "responsibility-v1" &&
+      !["Other analyzed source", "Library integration"].includes(n.group || ""),
+  );
+  if (!responsibilities.length) return view;
+  const groups = new Set(responsibilities.map((n) => n.id));
+  const byId = new Map(view.nodes.map((n) => [n.id, n]));
+  const links = view.edges.filter(
+    (e) =>
+      groups.has(e.source) &&
+      (groups.has(e.target) ||
+        ["sdk", "storage"].includes(byId.get(e.target)?.kind || "")),
+  );
+  const targets = new Set(links.map((e) => e.target));
+  const nodes = [
+    ...responsibilities,
+    ...view.nodes.filter((n) => targets.has(n.id) && !groups.has(n.id)),
+  ].slice(0, 16);
+  const visible = new Set(nodes.map((n) => n.id));
+  const edges = links.filter(
+    (e) => visible.has(e.source) && visible.has(e.target),
+  );
+  return {
+    ...view,
+    nodes,
+    edges,
+    metadata: {
+      ...view.metadata,
+      focused_overview: true,
+      overview_hidden_nodes: view.nodes.length - nodes.length,
+      overview_hidden_edges: view.edges.length - edges.length,
+    },
+  };
+}
+
 export const relationLabels: Record<string, string> = {
   CALLS: "Function call",
   CONSTRUCTS: "Constructor call",
@@ -10,6 +51,9 @@ export const relationLabels: Record<string, string> = {
   CONSTRUCTS_CLIENT: "Creates SDK client",
   HTTP_INTEGRATION: "HTTP integration",
   CALLS_HTTP: "HTTP call",
+  USES_RESOURCE: "Resource operation",
+  RESOURCE_USAGE: "Uses resource",
+  HANDLER_REFERENCE: "Handled by",
   IMPORTS: "Import dependency",
   IMPORT_DEPENDENCY: "Import dependency",
   REEXPORTS: "Re-export",

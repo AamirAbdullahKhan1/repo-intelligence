@@ -13,6 +13,7 @@ export interface Entity {
   profile?: string;
   component_id?: string;
   group?: string;
+  projection_rule?: string;
   canonical_id?: string;
   role?: string;
   can_expand?: boolean;

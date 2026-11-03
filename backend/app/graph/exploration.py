@@ -5,10 +5,10 @@ Consumes saved canonical records. Does not parse source, resolve new calls, or m
 from collections import Counter, defaultdict
 import hashlib
 import json
-from .projections import architecture_view, entries
+from .projections import architecture_view, entries, responsibility_view
 
 DECLARATIONS = {'BINDS_RESOURCE','BINDS_SERVICE','DECLARES_CONTAINER','CONFIGURES_LOG_SINK','STARTS_AFTER','ENTRYPOINT'}
-CALLS = {'CALLS','CONSTRUCTS','HANDLED_BY','SDK_API_CALL','CONSTRUCTS_CLIENT','CALLS_HTTP'}
+CALLS = {'CALLS','CONSTRUCTS','HANDLED_BY','SDK_API_CALL','CONSTRUCTS_CLIENT','CALLS_HTTP','USES_RESOURCE'}
 IMPORTS = {'IMPORTS','REEXPORTS','TYPE_REFERENCES','DEFINED_IN'}
 GROUPS = {
     'group:sdk': ('SDK libraries', {'sdk'}),
@@ -42,6 +42,9 @@ class Index:
             if n['kind']=='symbol' and n.get('has_body'):
                 bounds=[self.evidence[i] for i in n.get('evidence_ids',[]) if i in self.evidence and self.evidence[i]['rule']=='symbol-declaration']
                 if bounds: self.symbols_by_file[n.get('file')].append((bounds[0],n))
+        for n in graph['entities']:
+            if n.get('projection_rule')=='responsibility-v1':
+                self.children[n['id']] = [self.nodes[i] for i in n['members'] if self.nodes[i]['kind'] in ('symbol','endpoint')]
         for edge in graph['edges']:
             self.outgoing[edge['source']].append(edge)
             if edge['kind']=='CALLS' and self.nodes[edge['source']].get('component_id')!=self.nodes[edge['target']].get('component_id'):
@@ -74,12 +77,16 @@ class Index:
         if n['kind']=='application':
             return {i for i,x in self.nodes.items() if x.get('application_id')==scope or i==scope}
         if n['kind']=='component':
+            if n.get('projection_rule')=='responsibility-v1':return set(n['members'])|{scope}
             return {i for i,x in self.nodes.items() if x.get('component_id')==scope or i==scope}
         return {scope}
 
     def unknown_indices(self, scope):
         if not scope: return list(range(len(self.graph['unknowns'])))
         n=self.nodes.get(scope,{})
+        if n.get('projection_rule')=='responsibility-v1':
+            members=set(n['members'])
+            return [i for i in range(len(self.graph['unknowns'])) if self.unknown_source(i) in members]
         if n.get('kind') in ('application','component','file'): return self.unknown_by_owner[scope]
         if n.get('kind')=='symbol':
             file=self.files.get(n.get('file'),{})
@@ -95,11 +102,15 @@ class Index:
                              'components':counts['component'],'unresolved':len(self.unknown_indices(n['id']))}
             result['can_expand']=True
         if n['kind']=='component':
-            group=n.get('group','')
-            result['role']=('Server source module' if group.startswith('src/server') else
-                            'UI source module' if group.startswith(('src/components','src/features','src/hooks')) else
-                            'Routes and pages (may contain server code)' if group in ('src/app','app') else 'Logical source module')
+            result['role']=n.get('responsibility') or 'Directory-owned source module; responsibility not established'
         elif n['kind']=='application': result['role']=n.get('boundary') or 'Package boundary; deployment not implied'
+        if n.get('projection_rule')=='responsibility-v1':
+            result['member_count']=len(self.nodes[n['id']]['members'])
+            result.pop('members',None)
+            for key in ('evidence_ids','support_edge_ids'):
+                if len(result.get(key,[]))>20:
+                    result[key+'_total']=len(result[key]);result[key]=result[key][:20]
+                    result['details_truncated']=True
         return result
 
     def group(self, identifier):
@@ -150,6 +161,10 @@ class Index:
         return sorted(groups.values(),key=lambda e:(-e['count'],e['id']))
 
     def system(self, scope=None, layer='source', limit=24, dependencies=False, connections=False):
+        if layer=='source' and self.graph.get('architecture') and (not scope or self.nodes.get(scope,{}).get('kind')=='application' or self.nodes.get(scope,{}).get('projection_rule')=='responsibility-v1'):
+            result=responsibility_view(self.graph,scope,limit)
+            result['nodes']=[self.decorate(n) for n in result['nodes']]
+            return result
         if layer in ('infrastructure','all') and not scope:
             old=architecture_view(self.graph,'system',limit=limit,layer=layer)
             old['nodes']=[self.decorate(n) if n['id'] in self.nodes else n for n in old['nodes']]
@@ -291,10 +306,12 @@ class Index:
     def uncertainty(self, i):
         raw=self.graph['unknowns'][i]
         uid=stable('unresolved',json.dumps(raw,sort_keys=True))
-        node={'id':uid,'kind':'unresolved','label':'Unknown '+raw['kind']+' target','resolution':'unresolved',
+        resolution='ambiguous' if raw.get('resolution')=='ambiguous' else 'unresolved'
+        node={'id':uid,'kind':'unresolved','label':('Ambiguous ' if resolution=='ambiguous' else 'Unknown ')+raw['kind']+' target','resolution':resolution,
               'file':raw.get('file'),'source_id':self.unknown_source(i),'evidence_ids':raw.get('evidence_ids',[]),'reason':raw['reason'],'unknown_index':i}
+        if raw.get('candidate_ids'):node['candidate_ids']=raw['candidate_ids']
         edge={'id':uid+':reference','source':self.unknown_source(i),'target':uid,'kind':'UNRESOLVED_REFERENCE',
-              'resolution':'unresolved','evidence_ids':raw.get('evidence_ids',[]),'unknown_index':i,
+              'resolution':resolution,'evidence_ids':raw.get('evidence_ids',[]),'unknown_index':i,
               'derivation':raw['reason'],'limitation':'Placeholder records an unresolved reference; no target entity or communication is inferred.'}
         return node,edge
 
@@ -302,7 +319,7 @@ class Index:
         indices=self.unknown_indices(scope)
         return {'total':len(indices),'offset':offset,'limit':limit,'items':[
             {**self.graph['unknowns'][i],'id':stable('unresolved',json.dumps(self.graph['unknowns'][i],sort_keys=True)),
-             'unknown_index':i,'resolution':'unresolved','source_id':self.unknown_source(i)} for i in indices[offset:offset+limit]]}
+             'unknown_index':i,'resolution':'ambiguous' if self.graph['unknowns'][i].get('resolution')=='ambiguous' else 'unresolved','source_id':self.unknown_source(i)} for i in indices[offset:offset+limit]]}
 
     def evidence_record(self, identifier, scope=None, layer='source', limit=24, dependencies=False):
         record=self.nodes.get(identifier) or next((e for e in self.graph['edges'] if e['id']==identifier),None)

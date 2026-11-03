@@ -72,3 +72,14 @@ class Store:
         with self.connect() as db:
             row = db.execute('SELECT summary,graph FROM analyses WHERE id=?', (identifier,)).fetchone()
         return json.loads(row[1 if graph else 0]) if row else None
+
+    def delete_analysis(self, identifier):
+        """Delete exactly one saved result and its completed-job pointers."""
+        with self.connect() as db:
+            removed = db.execute('DELETE FROM analyses WHERE id=?', (identifier,)).rowcount
+            if removed:
+                for job_id, payload in db.execute('SELECT id,payload FROM jobs').fetchall():
+                    job = json.loads(payload)
+                    if job.get('snapshot_id') == identifier and job.get('status') in ('complete','failed','cancelled'):
+                        db.execute('DELETE FROM jobs WHERE id=?', (job_id,))
+        return bool(removed)

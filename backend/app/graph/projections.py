@@ -1,6 +1,45 @@
 import hashlib
 from collections import defaultdict, deque
 
+
+def responsibility_view(graph, scope=None, limit=24):
+    model = graph['architecture']
+    nodes = {n['id']: n for n in graph['entities']}
+    groups = [nodes[i] for i in model['component_ids'] if not scope or nodes[i].get('application_id') == scope or i == scope]
+    order = {role:i for i,role in enumerate(['Client-side requests','API handling','Database access','Object storage access','Cache and messaging','AI integration','Payment integration','Email integration','Outbound HTTP','Library integration','Other analyzed source'])}
+    groups.sort(key=lambda n: (order.get(n.get('responsibility'),99), n['label'], n['id']))
+    group_total = len(groups)
+    # Preserve room for concrete destinations, never show every function.
+    budget = min(12, max(1, limit - 4))
+    groups = groups[:budget]
+    active = {n['id'] for n in groups}
+    edge_ids = set(model['edge_ids'])
+    links = [e for e in graph['edges'] if e['id'] in edge_ids and e['source'] in active]
+    destinations = sorted({e['target'] for e in links if e['target'] not in active and nodes[e['target']]['kind'] != 'component'},
+                          key=lambda i: (nodes[i]['kind'] != 'storage', nodes[i]['label'], i))
+    selected = groups + [nodes[i] for i in destinations[:max(0, limit-len(groups))]]
+    visible = {n['id'] for n in selected}
+    edges = [e for e in links if e['target'] in visible]
+    total = len(edges)
+    # Full membership/provenance stays in the saved canonical graph. The landing
+    # response is bounded; selecting the canonical ID retrieves its evidence.
+    def compact(record):
+        value=dict(record)
+        if 'members' in value:
+            value['member_count']=len(value.pop('members'))
+        for key in ('evidence_ids','support_edge_ids'):
+            if key in value and len(value[key])>20:
+                value[key+'_total']=len(value[key])
+                value[key]=value[key][:20]
+                value['details_truncated']=True
+        return value
+    return dict(snapshot_id=graph['snapshot_id'], kind='system', nodes=[compact(n) for n in selected], edges=[compact(e) for e in edges[:60]],
+        metadata=dict(static_only=True, scope_id=scope, abstraction='technical responsibilities',
+            truncated=len(groups)<group_total or len(destinations)>limit-len(groups) or total>60,
+            omitted_groups=group_total-len(groups),
+            note='Derived technical role groups, not deployable services. Select a group for original code and static workflow evidence.',
+            warning=model['limitation']))
+
 def project(graph: dict) -> dict:
     nodes = {e['id']: e for e in graph['entities']}
 
@@ -22,9 +61,10 @@ def project(graph: dict) -> dict:
             if not a or not b or a == b:
                 continue
             display_kind='SDK_USAGE' if edge['kind'] in ('SDK_API_CALL','CONSTRUCTS_CLIENT') else edge['kind']
-            key = (a,b,display_kind)
+            resolution = edge.get('resolution', 'resolved')
+            key = (a,b,display_kind,resolution)
             group = groups.setdefault(key, {'id': 'projection:'+hashlib.sha256('|'.join(key).encode()).hexdigest()[:20],
-                'source':a,'target':b,'kind':display_kind,'support_edge_ids':[], 'evidence_ids':[],'count':0})
+                'source':a,'target':b,'kind':display_kind,'resolution':resolution,'support_edge_ids':[], 'evidence_ids':[],'count':0})
             group['support_edge_ids'].append(edge['id'])
             group['evidence_ids'] += edge['evidence_ids']
             group['count'] += 1
@@ -65,6 +105,8 @@ def entries(graph):
 
 
 def architecture_view(graph, kind='system', entry_id=None, depth=2, limit=24, dependencies=False, layer='source', nested=False):
+    if kind == 'system' and layer == 'source' and graph.get('architecture'):
+        return responsibility_view(graph, limit=limit)
     by_id = {n['id']: n for n in graph['entities']}
     metadata = {'static_only': True, 'warning': 'Static relationships do not establish execution order or runtime reachability.'}
     if kind == 'system':
@@ -93,9 +135,9 @@ def architecture_view(graph, kind='system', entry_id=None, depth=2, limit=24, de
                 if e['target'] not in sdk_ids:
                     regroup[e['id']]=e
                     continue
-                key=e['source']+'|'+e['kind']
+                key=e['source']+'|'+e['kind']+'|'+e.get('resolution','resolved')
                 group=regroup.setdefault(key,dict(id='projection:'+hashlib.sha256(key.encode()).hexdigest()[:20],
-                    source=e['source'],target=group_id,kind=e['kind'],evidence_ids=[],support_edge_ids=[],count=0))
+                    source=e['source'],target=group_id,kind=e['kind'],resolution=e.get('resolution','resolved'),evidence_ids=[],support_edge_ids=[],count=0))
                 group['evidence_ids']=sorted(set(group['evidence_ids']+e['evidence_ids']))
                 group['support_edge_ids']+=e.get('support_edge_ids',[e['id']])
                 group['count']+=e.get('count',1)
@@ -111,7 +153,7 @@ def architecture_view(graph, kind='system', entry_id=None, depth=2, limit=24, de
         entry_id = entry_id or (candidates[0]['id'] if candidates else None)
         if entry_id and entry_id not in by_id:
             raise ValueError('Unknown workflow entry')
-        allowed = {'HANDLED_BY', 'CALLS', 'CONSTRUCTS', 'SDK_API_CALL', 'CONSTRUCTS_CLIENT', 'CALLS_HTTP'}
+        allowed = {'HANDLED_BY', 'CALLS', 'CONSTRUCTS', 'SDK_API_CALL', 'CONSTRUCTS_CLIENT', 'CALLS_HTTP', 'USES_RESOURCE'}
         if nested:
             allowed.add('CONTAINS_SYMBOL')
         if dependencies:

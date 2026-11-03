@@ -51,6 +51,10 @@ export const api = {
     request<Job>(`/jobs/${id}/cancel`, { method: "POST" }),
   history: () => request<Analysis[]>("/analyses"),
   analysis: (id: string) => request<Analysis>(`/analyses/${id}`),
+  deleteAnalysis: (id: string) =>
+    request<{ deleted: string }>(`/analyses/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
   entries: (id: string) => request<Entity[]>(`/analyses/${id}/entries`),
   view: (
     id: string,

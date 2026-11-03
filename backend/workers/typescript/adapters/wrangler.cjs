@@ -22,7 +22,7 @@ for(const p of texts.keys()) if(/(?:^|[\\/])wrangler[^\\/]*\.jsonc?$/.test(p)) {
   }
   for(const item of cfg.r2_buckets||[]) {
     const rid=entity('storage',item.bucket_name,item.bucket_name,{technology:'R2 bucket',evidence_ids:[propertyEvidence('bucket_name',item.bucket_name)]});
-    edge(unit,rid,'BINDS_RESOURCE',[propertyEvidence('bucket_name',item.bucket_name)],{profile,binding:item.binding});
+    edge(unit,rid,'BINDS_RESOURCE',[propertyEvidence('bucket_name',item.bucket_name),propertyEvidence('binding',item.binding)],{profile,binding:item.binding});
   }
   const sqliteClasses=new Set((cfg.migrations||[]).flatMap(m=>m.new_sqlite_classes||[]));
   for(const item of cfg.durable_objects?.bindings||[]) {

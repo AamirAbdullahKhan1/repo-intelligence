@@ -105,6 +105,12 @@ def register_routes(app, data: Path):
             raise HTTPException(404, 'Analysis not found')
         return value
 
+    @app.delete('/api/v1/analyses/{snapshot}')
+    def delete_analysis(snapshot: str):
+        if not app.state.store.delete_analysis(snapshot):
+            raise HTTPException(404, 'Analysis not found')
+        return {'deleted': snapshot}
+
     @app.get('/api/v1/analyses/{snapshot}/entries')
     def entry_points(snapshot: str):
         return entries(graph(snapshot))

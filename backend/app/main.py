@@ -26,7 +26,7 @@ def create_app(settings: Settings | None = None):
     app = FastAPI(title='Repo Intelligence', version='1.0.0', lifespan=lifespan,
                   description='Deterministic local TypeScript/JavaScript repository analysis')
     app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins.split(','),
-                       allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
+                       allow_methods=['GET', 'POST', 'DELETE'], allow_headers=['Content-Type'])
 
     register_routes(app, data)
 

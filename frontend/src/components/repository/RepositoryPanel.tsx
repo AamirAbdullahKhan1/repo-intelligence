@@ -9,6 +9,7 @@ type Props = {
   onZip: (file: File) => void;
   onCancel: () => void;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 };
 export function RepositoryPanel({
   history,
@@ -19,8 +20,11 @@ export function RepositoryPanel({
   onZip,
   onCancel,
   onSelect,
+  onDelete,
 }: Props) {
   const [url, setUrl] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState("");
+  const [deleting, setDeleting] = useState(false);
   return (
     <aside className="navigation">
       <div className="brand">
@@ -75,20 +79,60 @@ export function RepositoryPanel({
       <div className="history">
         {!history.length && <p>No saved snapshots yet.</p>}
         {history.map((s) => (
-          <button
-            className={s.snapshot_id === selected ? "active" : ""}
-            key={s.snapshot_id}
-            onClick={() => {
-              onSelect(s.snapshot_id);
-            }}
-          >
-            <strong>{s.repository}</strong>
-            <small>
-              {new Date(s.created_at).toLocaleString()}
-              <br />
-              {s.snapshot_id.slice(0, 12)}
-            </small>
-          </button>
+          <div key={s.snapshot_id} className="history-item">
+            <button
+              className={s.snapshot_id === selected ? "active" : ""}
+              onClick={() => {
+                onSelect(s.snapshot_id);
+              }}
+            >
+              <strong>{s.repository}</strong>
+              <small>
+                {new Date(s.created_at).toLocaleString()}
+                <br />
+                {s.snapshot_id.slice(0, 12)}
+              </small>
+            </button>
+            {confirmDelete === s.snapshot_id ? (
+              <div className="scan-delete-confirm">
+                <p>
+                  Delete this saved scan? This cannot be undone. Your repository
+                  is not affected.
+                </p>
+                <button
+                  disabled={deleting || busy}
+                  onClick={async () => {
+                    setDeleting(true);
+                    try {
+                      await onDelete(s.snapshot_id);
+                      setConfirmDelete("");
+                    } catch {
+                      /* Error shown by parent. */
+                    } finally {
+                      setDeleting(false);
+                    }
+                  }}
+                >
+                  {deleting ? "Deleting…" : "Confirm delete"}
+                </button>
+                <button
+                  disabled={deleting}
+                  onClick={() => setConfirmDelete("")}
+                >
+                  Keep scan
+                </button>
+              </div>
+            ) : (
+              <button
+                className="delete-scan"
+                aria-label={`Delete scan ${s.snapshot_id.slice(0, 12)}`}
+                disabled={busy || deleting}
+                onClick={() => setConfirmDelete(s.snapshot_id)}
+              >
+                Delete scan
+              </button>
+            )}
+          </div>
         ))}
       </div>
       <footer>

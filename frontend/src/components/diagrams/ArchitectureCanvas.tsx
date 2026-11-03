@@ -92,7 +92,9 @@ export function ArchitectureCanvas({
     let active = true;
     setReady(false);
     setError("");
-    const nodeWidth = view.kind === "system" ? 205 : 250;
+    const focused = Boolean(view.metadata.focused_overview);
+    const nodeWidth = view.kind === "system" ? 245 : 250;
+    const nodeHeight = view.kind === "system" ? 112 : 88;
     elk
       .layout({
         id: "root",
@@ -103,11 +105,12 @@ export function ArchitectureCanvas({
           "elk.layered.spacing.nodeNodeBetweenLayers":
             view.kind === "system" ? "60" : "110",
           "elk.edgeRouting": "ORTHOGONAL",
+          "elk.separateConnectedComponents": focused ? "false" : "true",
         },
         children: view.nodes.map((n) => ({
           id: n.id,
           width: nodeWidth,
-          height: 88,
+          height: nodeHeight,
         })),
         edges: view.edges.map((e) => ({
           id: e.id,
@@ -133,7 +136,7 @@ export function ArchitectureCanvas({
                 targetPosition: Position.Left,
                 style: {
                   width: nodeWidth,
-                  height: 88,
+                  height: nodeHeight,
                   background: palette[n.kind] || "#283548",
                   color: "#e8f0fa",
                   border:
@@ -159,7 +162,9 @@ export function ArchitectureCanvas({
                                 ? "METHOD"
                                 : "FUNCTION"
                           : n.kind === "component"
-                            ? "LOGICAL MODULE"
+                            ? n.projection_rule === "responsibility-v1"
+                              ? "DERIVED RESPONSIBILITY"
+                              : "LOGICAL MODULE"
                             : n.kind === "application"
                               ? n.boundary?.includes("candidate")
                                 ? "SOURCE ROOT CANDIDATE"
@@ -171,10 +176,16 @@ export function ArchitectureCanvas({
                           ? "HTTP integrations"
                           : n.id === "group:infrastructure"
                             ? "Infrastructure"
-                            : n.label}
+                            : n.projection_rule === "responsibility-v1"
+                              ? n.group || n.label
+                              : n.label}
                       </strong>
                       <div className="node-detail">
-                        {n.role ||
+                        {(n.projection_rule === "responsibility-v1"
+                          ? n.label.split(" · ").slice(1).join(" · ") ||
+                            "Derived from source operations"
+                          : "") ||
+                          n.role ||
                           n.reason ||
                           n.technology ||
                           n.file ||
@@ -182,7 +193,7 @@ export function ArchitectureCanvas({
                           n.profile ||
                           "Source-backed identity"}
                       </div>
-                      {n.stats && n.stats.unresolved > 0 && (
+                      {!focused && n.stats && n.stats.unresolved > 0 && (
                         <div className="node-uncertainty">
                           {n.stats.unresolved} refs need context
                         </div>
@@ -294,8 +305,8 @@ export function ArchitectureCanvas({
   if (!nodes.length)
     return (
       <div className="canvas-message">
-        No supported relationships in this view. Choose another source entry or
-        logical module in the explorer.
+        No supported entities in this view. Try Code explorer, Declared
+        deployment or another entry point.
       </div>
     );
   return (

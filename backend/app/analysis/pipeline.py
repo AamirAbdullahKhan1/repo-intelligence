@@ -14,6 +14,7 @@ from app.evidence.validation import validate
 from app.evidence.redaction import redact
 from app.ingestion.snapshot import freeze, fingerprint
 from app.analysis.configuration import augment
+from app.analysis.responsibilities import interpret
 
 WORKER = Path(__file__).resolve().parents[2] / 'workers/typescript/index.cjs'
 
@@ -56,6 +57,7 @@ def analyze(root: Path, cancelled=lambda: False, timeout=120) -> dict:
         try:
             graph = Graph.model_validate_json(b''.join(chunks)).model_dump()
             augment(graph, root)
+            interpret(graph)
             graph = Graph.model_validate(graph).model_dump()
         except ValidationError as exc:
             # Pydantic error strings can contain input values. Do not return them to API clients.

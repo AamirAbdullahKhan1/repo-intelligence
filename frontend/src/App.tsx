@@ -14,6 +14,7 @@ export default function App() {
         onZip={repository.zip}
         onCancel={repository.cancel}
         onSelect={repository.select}
+        onDelete={repository.deleteAnalysis}
       />
       <Architecture
         key={repository.selected + ":" + repository.viewRevision}

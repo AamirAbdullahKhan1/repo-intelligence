@@ -73,7 +73,14 @@ export function useRepository() {
           if (active) setSummary(s);
         })
         .catch((e) => {
-          if (active) setError(e.message);
+          if (active) {
+            setError(e.message);
+            if (e.message === "Analysis not found") {
+              setSelected("");
+              localStorage.removeItem("analysis-id");
+              refresh();
+            }
+          }
         });
     }
     return () => {
@@ -103,6 +110,24 @@ export function useRepository() {
         .then(setJob)
         .catch((e) => setError(e.message));
   };
+  async function deleteAnalysis(id: string) {
+    setError("");
+    try {
+      await api.deleteAnalysis(id);
+      setHistory((values) => values.filter((s) => s.snapshot_id !== id));
+      setSelected((current) => (current === id ? "" : current));
+      setSummary((current) => (current?.snapshot_id === id ? null : current));
+      if (localStorage.getItem("analysis-id") === id)
+        localStorage.removeItem("analysis-id");
+      if (job?.snapshot_id === id) {
+        setJob(null);
+        localStorage.removeItem("analysis-job");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    }
+  }
   return {
     history,
     selected,
@@ -114,6 +139,7 @@ export function useRepository() {
     setError,
     select,
     cancel,
+    deleteAnalysis,
     github: (url: string) => submit(() => api.github(url)),
     zip: (file: File) => submit(() => api.zip(file)),
   };

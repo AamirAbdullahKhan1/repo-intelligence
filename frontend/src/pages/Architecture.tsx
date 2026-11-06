@@ -661,7 +661,9 @@ export function Architecture({
               )}
               <p className="view-note">
                 {section === "overview"
-                  ? "Derived responsibility groups are logical views, not separate deployed services. Unclassified code remains available in Code explorer."
+                  ? view?.metadata.abstraction === "entry-point capabilities"
+                    ? "Capabilities follow public routes and supported implementation paths. Helpers may be shared; these are not separate deployed services."
+                    : "Derived responsibility groups are logical views, not separate deployed services. Unclassified code remains available in Code explorer."
                   : section === "deployment"
                     ? "Configuration declarations are separate from source operations."
                     : `Exploring ${selectionName}. Select a relationship for supporting evidence.`}{" "}
@@ -683,7 +685,10 @@ export function Architecture({
               </p>
               {section === "overview" &&
                 view &&
-                view.metadata.abstraction !== "technical responsibilities" && (
+                ![
+                  "technical responsibilities",
+                  "entry-point capabilities",
+                ].includes(String(view.metadata.abstraction)) && (
                   <p className="view-note legacy-notice">
                     This saved analysis uses the older source grouping. Run a
                     new scan to generate responsibility-based architecture; the

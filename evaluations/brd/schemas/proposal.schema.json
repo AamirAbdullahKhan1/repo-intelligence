@@ -1,0 +1,776 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BRD interpretation proposal 2.1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "entities",
+    "relationships",
+    "workflows",
+    "findings",
+    "dispositions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.1"
+    },
+    "entities": {
+      "type": "array",
+      "maxItems": 600,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "scope",
+          "status",
+          "derivation",
+          "modality",
+          "release",
+          "evidence",
+          "kind",
+          "label",
+          "owner_id",
+          "owner_evidence",
+          "vendor_status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "intended",
+              "candidate",
+              "future",
+              "prohibited",
+              "pending",
+              "unspecified",
+              "contradictory"
+            ]
+          },
+          "derivation": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "derived",
+              "proposed"
+            ]
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "mandatory",
+              "desirable",
+              "optional",
+              "prohibited",
+              "target",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "release": {
+            "type": "string",
+            "enum": [
+              "current",
+              "future",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "required": [
+                "source_id",
+                "quote"
+              ],
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                }
+              }
+            },
+            "minItems": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "actor",
+              "component",
+              "resource",
+              "operation",
+              "external_system",
+              "control",
+              "data"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "owner_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "owner_evidence": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "required": [
+                "source_id",
+                "quote"
+              ],
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                }
+              }
+            }
+          },
+          "vendor_status": {
+            "type": "string",
+            "enum": [
+              "selected",
+              "pending",
+              "candidate",
+              "unspecified",
+              "not_applicable"
+            ]
+          }
+        }
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "maxItems": 600,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "scope",
+          "status",
+          "derivation",
+          "modality",
+          "release",
+          "evidence",
+          "source",
+          "target",
+          "type",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "intended",
+              "candidate",
+              "future",
+              "prohibited",
+              "pending",
+              "unspecified",
+              "contradictory"
+            ]
+          },
+          "derivation": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "derived",
+              "proposed"
+            ]
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "mandatory",
+              "desirable",
+              "optional",
+              "prohibited",
+              "target",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "release": {
+            "type": "string",
+            "enum": [
+              "current",
+              "future",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "required": [
+                "source_id",
+                "quote"
+              ],
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                }
+              }
+            },
+            "minItems": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "INTERACTS_WITH",
+              "AUTHENTICATES",
+              "AUTHORIZES",
+              "INVOKES",
+              "READS",
+              "WRITES",
+              "TRIGGERS",
+              "PRODUCES",
+              "APPROVES",
+              "PERSISTS",
+              "DEPENDS_ON",
+              "PRECEDES",
+              "APPLIES_TO"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "maxItems": 600,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "scope",
+          "status",
+          "derivation",
+          "modality",
+          "release",
+          "evidence",
+          "title",
+          "entity_ids",
+          "relationship_ids",
+          "inputs",
+          "outputs",
+          "human_approval",
+          "automated_validation",
+          "authorization",
+          "failure_handling",
+          "sequence_basis",
+          "entry_step_ids",
+          "steps",
+          "transitions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "intended",
+              "candidate",
+              "future",
+              "prohibited",
+              "pending",
+              "unspecified",
+              "contradictory"
+            ]
+          },
+          "derivation": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "derived",
+              "proposed"
+            ]
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "mandatory",
+              "desirable",
+              "optional",
+              "prohibited",
+              "target",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "release": {
+            "type": "string",
+            "enum": [
+              "current",
+              "future",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "required": [
+                "source_id",
+                "quote"
+              ],
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                }
+              }
+            },
+            "minItems": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "entity_ids": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "minItems": 1
+          },
+          "relationship_ids": {
+            "type": "array",
+            "maxItems": 150,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          "inputs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "outputs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "human_approval": {
+            "type": "string",
+            "enum": [
+              "required",
+              "conditional",
+              "not_required",
+              "unspecified"
+            ]
+          },
+          "automated_validation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "authorization": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "failure_handling": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "sequence_basis": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "derived",
+              "unspecified"
+            ]
+          },
+          "entry_step_ids": {
+            "type": "array",
+            "maxItems": 60,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          "steps": {
+            "type": "array",
+            "maxItems": 60,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "kind",
+                "label",
+                "entity_id",
+                "approval_requirement",
+                "evidence"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "action",
+                    "decision",
+                    "approval",
+                    "validation",
+                    "authorization",
+                    "outcome"
+                  ]
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "entity_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "approval_requirement": {
+                  "type": "string",
+                  "enum": [
+                    "required",
+                    "conditional",
+                    "not_required",
+                    "unspecified"
+                  ]
+                },
+                "evidence": {
+                  "type": "array",
+                  "maxItems": 30,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "source_id",
+                      "quote"
+                    ],
+                    "properties": {
+                      "source_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "quote": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      }
+                    }
+                  },
+                  "minItems": 1
+                }
+              }
+            }
+          },
+          "transitions": {
+            "type": "array",
+            "maxItems": 120,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "source",
+                "target",
+                "branch",
+                "condition",
+                "evidence"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "target": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "branch": {
+                  "type": "string",
+                  "enum": [
+                    "normal",
+                    "success",
+                    "failure",
+                    "conditional"
+                  ]
+                },
+                "condition": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "evidence": {
+                  "type": "array",
+                  "maxItems": 30,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "source_id",
+                      "quote"
+                    ],
+                    "properties": {
+                      "source_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      "quote": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      }
+                    }
+                  },
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 600,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "scope",
+          "status",
+          "derivation",
+          "modality",
+          "release",
+          "evidence",
+          "kind",
+          "title",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$"
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "intended",
+              "candidate",
+              "future",
+              "prohibited",
+              "pending",
+              "unspecified",
+              "contradictory"
+            ]
+          },
+          "derivation": {
+            "type": "string",
+            "enum": [
+              "explicit",
+              "derived",
+              "proposed"
+            ]
+          },
+          "modality": {
+            "type": "string",
+            "enum": [
+              "mandatory",
+              "desirable",
+              "optional",
+              "prohibited",
+              "target",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "release": {
+            "type": "string",
+            "enum": [
+              "current",
+              "future",
+              "mixed",
+              "unspecified"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "required": [
+                "source_id",
+                "quote"
+              ],
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                }
+              }
+            },
+            "minItems": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "capability",
+              "constraint",
+              "decision",
+              "conflict",
+              "unknown",
+              "observation"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "dispositions": {
+      "type": "array",
+      "maxItems": 1500,
+      "items": {
+        "type": "object",
+        "required": [
+          "source_id",
+          "status",
+          "reason"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "represented",
+              "context",
+              "not_relevant",
+              "unresolved"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    }
+  }
+}

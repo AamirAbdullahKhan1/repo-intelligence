@@ -1,0 +1,13 @@
+Clinic Appointments
+
+Background
+Patients book appointments. Reception manages availability. This document does not specify an AI assistant.
+
+1. Requirements
+1. Patients may request an available slot.
+2. Appointment Management requires an appointment record and owns booking confirmation.
+3. If the slot is no longer available, offer another slot instead of confirming.
+4. Patient information must not appear in public appointment views.
+
+Acceptance criteria
+Then a rejected booking must not create a confirmed appointment.

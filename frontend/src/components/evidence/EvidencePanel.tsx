@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   Entity,
   EvidenceResponse,
@@ -33,10 +33,18 @@ export function EvidencePanel({
 }) {
   const [result, setResult] = useState<EvidenceResponse | null>(null),
     [error, setError] = useState("");
+  const [flow, setFlow] = useState<Awaited<
+    ReturnType<typeof api.flowEvidence>
+  > | null>(null);
+  const [flowBusy, setFlowBusy] = useState(false);
+  const flowGeneration = useRef(0);
   useEffect(() => {
     let active = true;
     setResult(null);
     setError("");
+    setFlow(null);
+    setFlowBusy(false);
+    flowGeneration.current++;
     api
       .evidence(snapshot, record, kind, layer, scope, limit, dependencies)
       .then((v) => {
@@ -50,6 +58,28 @@ export function EvidencePanel({
     };
   }, [snapshot, record, kind, layer, scope, limit, dependencies]);
   const item = result?.record;
+  const loadFlow = async () => {
+    const generation = flowGeneration.current;
+    setFlowBusy(true);
+    try {
+      const next = await api.flowEvidence(
+        snapshot,
+        record,
+        flow?.items.length || 0,
+      );
+      if (generation !== flowGeneration.current) return;
+      setFlow((previous) => ({
+        ...next,
+        items: [...(previous?.items || []), ...next.items],
+      }));
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not load value-flow evidence",
+      );
+    } finally {
+      if (generation === flowGeneration.current) setFlowBusy(false);
+    }
+  };
   const status = String(item?.resolution || "confirmed");
   const supporting = (item?.supporting_relationships || []) as {
     id: string;
@@ -154,6 +184,51 @@ export function EvidencePanel({
             </button>
           )}
           <h5>Supporting source locations</h5>
+          {(Boolean(item.flow_step_ids) || Boolean(item.support_edge_ids)) && (
+            <details>
+              <summary>Value-flow derivation</summary>
+              {!flow && (
+                <button disabled={flowBusy} onClick={loadFlow}>
+                  Load value-flow steps
+                </button>
+              )}
+              {flow && (
+                <>
+                  <p>
+                    {flow.note}
+                    {flow.partial
+                      ? " The flow analysis has reported limits."
+                      : ""}
+                  </p>
+                  {flow.total === 0 && (
+                    <p>
+                      This relationship has no value-flow derivation; inspect
+                      its source relationships.
+                    </p>
+                  )}
+                  {flow.items.map((step) => (
+                    <div className="citation" key={step.id}>
+                      <small>
+                        {step.kind.replaceAll("_", " ").toLowerCase()}
+                      </small>
+                      {step.locations.map((location, index) => (
+                        <div key={index}>
+                          <code>
+                            {location.file}:{location.line}:{location.column}
+                          </code>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  {flow.items.length < flow.total && (
+                    <button disabled={flowBusy} onClick={loadFlow}>
+                      More flow steps ({flow.items.length}/{flow.total})
+                    </button>
+                  )}
+                </>
+              )}
+            </details>
+          )}
           {result.evidence.length ? (
             result.evidence.slice(0, 3).map(citation)
           ) : (

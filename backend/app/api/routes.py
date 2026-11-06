@@ -142,6 +142,12 @@ def register_routes(app, data: Path):
         matches = [e for e in value['evidence'] if e['id'] in identifiers]
         return {'snapshot_id': snapshot, 'record': record, 'evidence': matches[:100], 'truncated': len(matches)>100}
 
+    @app.get('/api/v1/analyses/{snapshot}/flow-evidence')
+    def flow_evidence(snapshot: str, record_id: str, offset: int = Query(0,ge=0), limit: int = Query(30,ge=1,le=60)):
+        result=Index(graph(snapshot)).flow_evidence(record_id,offset,limit)
+        if result is None:raise HTTPException(404,'Evidence record not found')
+        return result
+
     @app.get('/api/v1/analyses/{snapshot}/unknowns')
     def unknowns(snapshot: str, offset: int = Query(0, ge=0), limit: int = Query(30, ge=1, le=60), scope_id: str | None = None):
         try:

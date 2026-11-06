@@ -161,15 +161,17 @@ export function ArchitectureCanvas({
                               : n.declaration_kind?.includes("Method")
                                 ? "METHOD"
                                 : "FUNCTION"
-                          : n.kind === "component"
-                            ? n.projection_rule === "responsibility-v1"
-                              ? "DERIVED RESPONSIBILITY"
-                              : "LOGICAL MODULE"
-                            : n.kind === "application"
-                              ? n.boundary?.includes("candidate")
-                                ? "SOURCE ROOT CANDIDATE"
-                                : "PACKAGE BOUNDARY"
-                              : n.kind.replaceAll("_", " ")}
+                          : n.projection_rule === "capability-1"
+                            ? "ENTRY-POINT CAPABILITY"
+                            : n.kind === "component"
+                              ? n.projection_rule === "responsibility-v1"
+                                ? "DERIVED RESPONSIBILITY"
+                                : "LOGICAL MODULE"
+                              : n.kind === "application"
+                                ? n.boundary?.includes("candidate")
+                                  ? "SOURCE ROOT CANDIDATE"
+                                  : "PACKAGE BOUNDARY"
+                                : n.kind.replaceAll("_", " ")}
                       </div>
                       <strong title={n.label} className="node-label">
                         {n.id === "group:http"

@@ -71,7 +71,7 @@ function ev(sf, node, rule, origin='source_code') {
   return eid;
 }
 function edge(source,target,kind,support,extra={}) {
-  const key=[source,target,kind,extra.callsite || '',extra.profile || 'source'].join('|');
+  const key=[source,target,kind,extra.callsite || '',extra.profile || 'source'].join('|')+(extra.flow_context_id?'|context:'+extra.flow_context_id:'');
   if (!edgeMap.has(key)) {
     const e={id:id('edge',key),source,target,kind,resolution:'resolved',grounding:'passed',evidence_ids:[...new Set(support)],...extra};
     edgeMap.set(key,e); edges.push(e);
@@ -202,7 +202,7 @@ function resolveModule(spec,file) {
 host.resolveModuleNames=(names,file)=>names.map(name=>resolveModule(name,file));
 const program=ts.createProgram(files,options,host), checker=program.getTypeChecker();
 const sources=program.getSourceFiles().filter(s=>texts.has(path.resolve(s.fileName)) && files.includes(path.resolve(s.fileName)));
-const importBindings=new Map(), assignments=new Map(), originCache=new Map();
+const importBindings=new Map(), assignments=new Map();
 const writtenSymbols=new Set(), dynamicScopeFiles=new Set();
 function symbol(n) { try { return checker.getSymbolAtLocation(n); } catch {return null;} }
 function unwrap(n) { while(n&&(ts.isAwaitExpression(n)||ts.isParenthesizedExpression(n)||ts.isAsExpression(n)||ts.isNonNullExpression(n)||ts.isTypeAssertionExpression(n))) n=n.expression; return n; }
@@ -211,6 +211,7 @@ function unwrap(n) { while(n&&(ts.isAwaitExpression(n)||ts.isParenthesizedExpres
 // following, including conditional, captured and destructuring assignments.
 function markWritten(raw) {
   const n=unwrap(raw); if(!n)return;
+  if(ts.isPropertyAccessExpression(n)||ts.isElementAccessExpression(n)){markWritten(n.expression);return;}
   if(ts.isIdentifier(n)) {const s=symbol(n);if(s)writtenSymbols.add(s);}
   else if(ts.isArrayLiteralExpression(n))for(const item of n.elements)markWritten(item);
   else if(ts.isObjectLiteralExpression(n))for(const item of n.properties) {
@@ -282,16 +283,18 @@ for (const sf of sources) {
   }; visit(sf);
   require('./adapters/next.cjs')({ts,r,sf,fid,ev,entity,edge,owner,component,symbolEntity,routes});
 }
+const resolveValue=require('./adapters/values.cjs')({ts,checker,symbol,unwrap,writtenSymbols,dynamicScopeFiles,texts,path});
 function resolveOrigin(raw,depth=0,seen=new Set()) {
   const n=unwrap(raw); if(!n||depth>9)return null;
+  {const definitions=[],value=resolveValue(n,definitions);if(value&&value!==n){const origin=resolveOrigin(value,depth+1,seen);if(origin)return {...origin,evidence:[...origin.evidence,...definitions.map(d=>ev(d.getSourceFile(),d,'bounded-value-summary'))]};}}
   if(ts.isIdentifier(n)) {
     const s=symbol(n);if(!s||seen.has(s))return null;
+    if(writtenSymbols.has(s)||dynamicScopeFiles.has(n.getSourceFile()))return null;
     if(importBindings.has(s))return importBindings.get(s);
     const next=new Set(seen);next.add(s);
     const values=[];
     for(const d of s.declarations||[]) {
       if(ts.isVariableDeclaration(d)&&d.initializer)values.push(d.initializer);
-      if(ts.isBindingElement(d)&&ts.isVariableDeclaration(d.parent?.parent)&&d.parent.parent.initializer)values.push(d.parent.parent.initializer);
     }
     values.push(...(assignments.get(s)||[]));
     const effective=values.filter(x=>x.kind!==ts.SyntaxKind.NullKeyword && !(ts.isIdentifier(x)&&x.text==='undefined'));
@@ -306,20 +309,20 @@ function resolveOrigin(raw,depth=0,seen=new Set()) {
     if(n.expression.kind===ts.SyntaxKind.ImportKeyword&&ts.isStringLiteral(n.arguments[0]))return {package:n.arguments[0].text,name:'*',instance:false,evidence:[ev(n.getSourceFile(),n,'dynamic-import-literal')]};
     const target=checker.getResolvedSignature(n)?.declaration;
     if(target?.body&&texts.has(path.resolve(target.getSourceFile().fileName))) {
-      if(originCache.has(target))return originCache.get(target);
-      originCache.set(target,null);const returns=[];
+      const returns=[];
       function find(x){if(x!==target&&ts.isFunctionLike(x))return;if(ts.isReturnStatement(x)&&x.expression)returns.push(x.expression);ts.forEachChild(x,find);}
       find(target);
-      const os=returns.map(x=>resolveOrigin(x,depth+1,seen)).filter(Boolean);
-      if(os.length===returns.length&&os.length&&new Set(os.map(x=>x.package)).size===1) {
-        const o={...os[0],evidence:[...new Set([...os.flatMap(x=>x.evidence),ev(n.getSourceFile(),n,'local-factory-return')])]};originCache.set(target,o);return o;
-      }
+      const origins=returns.map(x=>resolveOrigin(x,depth+1,seen));
+      if(origins.length&&origins.every(Boolean)&&new Set(origins.map(o=>JSON.stringify([o.package,o.name,o.instance,o.typeOnly]))).size===1)
+        return {...origins[0],evidence:[...new Set([...origins.flatMap(o=>o.evidence),ev(n.getSourceFile(),n,'all-return-paths-sdk-identity')])]};
     }
+
   }
   return null;
 }
 function literal(raw,depth=0,definitions=[]) {
-  const n=unwrap(raw);if(!n||depth>5)return null;
+  let n=unwrap(raw);if(!n||depth>5)return null;
+  if(depth===0){const value=resolveValue(n,definitions);if(!value)return null;n=value;}
   if(ts.isStringLiteralLike(n))return n.text;
   if(ts.isTemplateExpression(n)) {
     let value=n.head.text;
@@ -351,9 +354,11 @@ const linkHttp=require('./adapters/http.cjs')({ts,inventory,routes,edges,owner,e
 // Pass two: bound local implementation calls, SDK uses and explicit HTTP call sites.
 const libraryReferences=[];
 const counts={call_expressions:0,resolved_implementation_calls:0,signature_only_calls:0,known_library_calls:0,unresolved_calls:0,sdk_api_calls:0};
+const linkCallbacks=require('./adapters/callbacks.cjs')({ts,checker,symbol,unwrap,resolveValue,texts,path,trustedLib,importBindings,writtenSymbols,dynamicScopeFiles,ev,edge,enclosing,symbolEntity});
 for(const sf of sources) {
   const r=rel(sf.fileName), visit=n=>{
     if(ts.isCallExpression(n)||ts.isNewExpression(n)) {
+      linkCallbacks(n);
       counts.call_expressions++;
       const support=ev(sf,n,ts.isNewExpression(n)?'constructor-callsite':'callsite'), caller=enclosing(n), signature=checker.getResolvedSignature(n), target=signature?.declaration;
       if(target?.body&&texts.has(path.resolve(target.getSourceFile().fileName))) {
@@ -393,7 +398,8 @@ for(const sf of sources) {
   };visit(sf);
 }
 require('./adapters/wrangler.cjs')({texts,json,ts,rel,ev,literal,entity,edge,contained,fileIds,unknowns,path});
-require('./adapters/resources.cjs')({ts,sources,entities,edges,entity,edge,ev,rel,owner,component,symbol,enclosing,literal,unwrap,writtenSymbols,dynamicScopeFiles,importBindings,unknowns});
+require('./adapters/resources.cjs')({ts,sources,entities,edges,entity,edge,ev,rel,owner,component,symbol,enclosing,literal,unwrap,resolveValue,writtenSymbols,dynamicScopeFiles,importBindings,unknowns});
+const flowAnalysis=require('./adapters/s3-flow.cjs')({ts,sources,checker,symbol,unwrap,texts,path,rel,ev,id,importBindings,isExternal,owner,entity,edge,enclosing,unknowns,dynamicScopeFiles});
 // One snapshot covers indexed file content, scope and tool version. No timing in canonical graph.
 const snapshot=digest(JSON.stringify([...texts].map(([p,t])=>[rel(p),digest(t)]).sort()));
 const analyzerHash=digest([__filename,path.join(__dirname,'guard.cjs'),...fs.readdirSync(path.join(__dirname,'adapters')).sort().map(n=>path.join(__dirname,'adapters',n))].map(p=>fs.readFileSync(p)).join(''));
@@ -405,6 +411,7 @@ const result={schema_version:'repo-intelligence-1',repository:path.basename(root
   coverage:{inventoried_files:inventory.length,parsed_source_files:sources.length,source_bytes:bytes,syntax_failures:diagnostics.filter(d=>d.kind==='parse').length,
     standard_library_files:program.getSourceFiles().filter(sf=>trustedLib(sf.fileName)).length,...counts,skipped:skips},
   library_references:libraryReferences,
+  flow_analysis:flowAnalysis,
   packages:packages.map(p=>({id:p.id,root:p.root,name:p.data.name,dependencies:Object.keys(p.data.dependencies||{}).sort()})),
   entities:entities.sort((a,b)=>a.id.localeCompare(b.id)),edges:edges.sort((a,b)=>a.id.localeCompare(b.id)),evidence:evidence.sort((a,b)=>a.id.localeCompare(b.id)),
   routes:routes.sort((a,b)=>a.file.localeCompare(b.file)||a.method.localeCompare(b.method)),unknowns,diagnostics};

@@ -3,14 +3,21 @@ from collections import defaultdict, deque
 
 
 def responsibility_view(graph, scope=None, limit=24):
-    model = graph['architecture']
+    capability = bool(graph.get('capability_architecture')) and not str(scope or '').startswith('responsibility:')
+    model = graph['capability_architecture'] if capability else graph['architecture']
+    if capability:
+        limit = min(limit, 16)
     nodes = {n['id']: n for n in graph['entities']}
     groups = [nodes[i] for i in model['component_ids'] if not scope or nodes[i].get('application_id') == scope or i == scope]
     order = {role:i for i,role in enumerate(['Client-side requests','API handling','Database access','Object storage access','Cache and messaging','AI integration','Payment integration','Email integration','Outbound HTTP','Library integration','Other analyzed source'])}
     groups.sort(key=lambda n: (order.get(n.get('responsibility'),99), n['label'], n['id']))
+    if capability:
+        capability_edges = set(model['edge_ids'])
+        resource_sources = {e['source'] for e in graph['edges'] if e['id'] in capability_edges and e['kind']=='USES_RESOURCE'}
+        groups.sort(key=lambda n: (n['id'] not in resource_sources, -len(n.get('entry_ids', [])), n['label'], n['id']))
     group_total = len(groups)
     # Preserve room for concrete destinations, never show every function.
-    budget = min(12, max(1, limit - 4))
+    budget = min(8 if capability else 12, max(1, limit - (6 if capability else 4)))
     groups = groups[:budget]
     active = {n['id'] for n in groups}
     edge_ids = set(model['edge_ids'])
@@ -27,6 +34,8 @@ def responsibility_view(graph, scope=None, limit=24):
         value=dict(record)
         if 'members' in value:
             value['member_count']=len(value.pop('members'))
+        if 'member_paths' in value:
+            value['member_path_count']=len(value.pop('member_paths'))
         for key in ('evidence_ids','support_edge_ids'):
             if key in value and len(value[key])>20:
                 value[key+'_total']=len(value[key])
@@ -34,10 +43,10 @@ def responsibility_view(graph, scope=None, limit=24):
                 value['details_truncated']=True
         return value
     return dict(snapshot_id=graph['snapshot_id'], kind='system', nodes=[compact(n) for n in selected], edges=[compact(e) for e in edges[:60]],
-        metadata=dict(static_only=True, scope_id=scope, abstraction='technical responsibilities',
+        metadata=dict(static_only=True, scope_id=scope, abstraction='entry-point capabilities' if capability else 'technical responsibilities',
             truncated=len(groups)<group_total or len(destinations)>limit-len(groups) or total>60,
             omitted_groups=group_total-len(groups),
-            note='Derived technical role groups, not deployable services. Select a group for original code and static workflow evidence.',
+            note='Route-anchored capabilities with shared implementation; not deployable services. Select a capability for entry points and evidence.' if capability else 'Derived technical role groups, not deployable services. Select a group for original code and static workflow evidence.',
             warning=model['limitation']))
 
 def project(graph: dict) -> dict:
@@ -153,7 +162,7 @@ def architecture_view(graph, kind='system', entry_id=None, depth=2, limit=24, de
         entry_id = entry_id or (candidates[0]['id'] if candidates else None)
         if entry_id and entry_id not in by_id:
             raise ValueError('Unknown workflow entry')
-        allowed = {'HANDLED_BY', 'CALLS', 'CONSTRUCTS', 'SDK_API_CALL', 'CONSTRUCTS_CLIENT', 'CALLS_HTTP', 'USES_RESOURCE'}
+        allowed = {'HANDLED_BY', 'CALLS', 'CONSTRUCTS', 'SDK_API_CALL', 'CONSTRUCTS_CLIENT', 'CALLS_HTTP', 'USES_RESOURCE', 'MAY_INVOKE_CALLBACK'}
         if nested:
             allowed.add('CONTAINS_SYMBOL')
         if dependencies:
@@ -187,6 +196,6 @@ def architecture_view(graph, kind='system', entry_id=None, depth=2, limit=24, de
         nodes = [by_id[i] for i in sorted(active)]
         metadata.update(entry_id=entry_id, depth=depth, truncated=truncated,
                         nested_definitions=nested,
-                        note='Solid arrows: resolved static calls. Optional dashed lexical definitions are not invocations. Select a function to explore from it.')
+                        note='Static relationships, not an execution sequence. Possible callback invocation is conditional on the named API contract. Optional lexical definitions are not invocations.')
     return {'snapshot_id': graph['snapshot_id'], 'kind': kind, 'nodes': nodes, 'edges': selected, 'metadata': metadata}
 

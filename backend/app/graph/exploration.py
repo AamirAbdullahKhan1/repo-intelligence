@@ -8,7 +8,7 @@ import json
 from .projections import architecture_view, entries, responsibility_view
 
 DECLARATIONS = {'BINDS_RESOURCE','BINDS_SERVICE','DECLARES_CONTAINER','CONFIGURES_LOG_SINK','STARTS_AFTER','ENTRYPOINT'}
-CALLS = {'CALLS','CONSTRUCTS','HANDLED_BY','SDK_API_CALL','CONSTRUCTS_CLIENT','CALLS_HTTP','USES_RESOURCE'}
+CALLS = {'CALLS','CONSTRUCTS','HANDLED_BY','SDK_API_CALL','CONSTRUCTS_CLIENT','CALLS_HTTP','USES_RESOURCE','MAY_INVOKE_CALLBACK'}
 IMPORTS = {'IMPORTS','REEXPORTS','TYPE_REFERENCES','DEFINED_IN'}
 GROUPS = {
     'group:sdk': ('SDK libraries', {'sdk'}),
@@ -77,14 +77,14 @@ class Index:
         if n['kind']=='application':
             return {i for i,x in self.nodes.items() if x.get('application_id')==scope or i==scope}
         if n['kind']=='component':
-            if n.get('projection_rule')=='responsibility-v1':return set(n['members'])|{scope}
+            if n.get('projection_rule') in ('responsibility-v1','capability-1'):return set(n['members'])|{scope}
             return {i for i,x in self.nodes.items() if x.get('component_id')==scope or i==scope}
         return {scope}
 
     def unknown_indices(self, scope):
         if not scope: return list(range(len(self.graph['unknowns'])))
         n=self.nodes.get(scope,{})
-        if n.get('projection_rule')=='responsibility-v1':
+        if n.get('projection_rule') in ('responsibility-v1','capability-1'):
             members=set(n['members'])
             return [i for i in range(len(self.graph['unknowns'])) if self.unknown_source(i) in members]
         if n.get('kind') in ('application','component','file'): return self.unknown_by_owner[scope]
@@ -102,7 +102,7 @@ class Index:
                              'components':counts['component'],'unresolved':len(self.unknown_indices(n['id']))}
             result['can_expand']=True
         if n['kind']=='component':
-            result['role']=n.get('responsibility') or 'Directory-owned source module; responsibility not established'
+            result['role']=('Route-anchored implementation slice; helpers may be shared' if n.get('projection_rule')=='capability-1' else n.get('responsibility') or 'Directory-owned source module; responsibility not established')
         elif n['kind']=='application': result['role']=n.get('boundary') or 'Package boundary; deployment not implied'
         if n.get('projection_rule')=='responsibility-v1':
             result['member_count']=len(self.nodes[n['id']]['members'])
@@ -161,7 +161,7 @@ class Index:
         return sorted(groups.values(),key=lambda e:(-e['count'],e['id']))
 
     def system(self, scope=None, layer='source', limit=24, dependencies=False, connections=False):
-        if layer=='source' and self.graph.get('architecture') and (not scope or self.nodes.get(scope,{}).get('kind')=='application' or self.nodes.get(scope,{}).get('projection_rule')=='responsibility-v1'):
+        if layer=='source' and self.graph.get('architecture') and (not scope or self.nodes.get(scope,{}).get('kind')=='application' or self.nodes.get(scope,{}).get('projection_rule') in ('responsibility-v1','capability-1')):
             result=responsibility_view(self.graph,scope,limit)
             result['nodes']=[self.decorate(n) for n in result['nodes']]
             return result
@@ -349,6 +349,21 @@ class Index:
         if record.get('kind') in DECLARATIONS:result['limitation']='Configuration declaration; runtime invocation and communication are not established.'
         elif 'limitation' not in result:result['limitation']='Source-supported static relationship; runtime execution, order and reachability are not guaranteed.'
         return result
+
+    def flow_evidence(self, identifier, offset=0, limit=30):
+        record=self.evidence_record(identifier)
+        if record is None:return None
+        flow=self.graph.get('flow_analysis',{})
+        steps={s['id']:s for s in flow.get('steps',[])}
+        selected=set(record.get('flow_step_ids',[]))
+        supported=set(record.get('support_edge_ids',[]))
+        for edge in self.graph['edges']:
+            if edge['id'] in supported:selected.update(edge.get('flow_step_ids',[]))
+        evidence={e['id']:e for e in self.graph['evidence']}
+        ordered=sorted(selected)
+        return {'total':len(ordered),'offset':offset,'limit':limit,'partial':flow.get('partial',False),
+                'items':[{**steps[i],'locations':[evidence[e] for e in steps[i]['evidence_ids']]} for i in ordered[offset:offset+limit]],
+                'note':'Value-flow dependencies, not runtime order. Original step IDs and complete paths remain in the saved graph.'}
 
     def summary(self):
         kinds=Counter(n['kind'] for n in self.nodes.values())

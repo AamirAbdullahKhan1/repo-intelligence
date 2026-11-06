@@ -88,4 +88,17 @@ export const api = {
     request<Unknowns>(
       `/analyses/${id}/unknowns?offset=${offset}&scope_id=${encodeURIComponent(scope)}`,
     ),
+  flowEvidence: (id: string, record: string, offset = 0) =>
+    request<{
+      total: number;
+      partial: boolean;
+      note: string;
+      items: {
+        id: string;
+        kind: string;
+        locations: { file: string; line: number; column: number }[];
+      }[];
+    }>(
+      `/analyses/${id}/flow-evidence?${new URLSearchParams({ record_id: record, offset: String(offset) })}`,
+    ),
 };

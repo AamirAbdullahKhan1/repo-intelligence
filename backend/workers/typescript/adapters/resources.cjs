@@ -1,5 +1,5 @@
 'use strict';
-module.exports=function({ts,sources,entities,edges,entity,edge,ev,rel,owner,component,symbol,enclosing,literal,unwrap,writtenSymbols,dynamicScopeFiles,importBindings,unknowns}) {
+module.exports=function({ts,sources,entities,edges,entity,edge,ev,rel,owner,component,symbol,enclosing,literal,unwrap,resolveValue,writtenSymbols,dynamicScopeFiles,importBindings,unknowns}) {
   const nodes=new Map(entities.map(n=>[n.id,n])), clients=new Map(), changed=new Set(writtenSymbols);
   function rootSymbol(n) {n=unwrap(n);while(n&&(ts.isPropertyAccessExpression(n)||ts.isElementAccessExpression(n)))n=unwrap(n.expression);return n&&symbol(n);}
   // Property replacement on a client/env invalidates this narrow receiver model.
@@ -39,12 +39,12 @@ module.exports=function({ts,sources,entities,edges,entity,edge,ev,rel,owner,comp
           const technology=imported&&!imported.typeOnly&&imported.package==='pg'&&['Pool','Client'].includes(imported.name)&&ts.isNewExpression(init)?'PostgreSQL':
             imported&&!imported.typeOnly&&imported.package==='redis'&&imported.name==='createClient'&&ts.isCallExpression(init)?'Redis':null;
           if(technology) {
-            const options=unwrap(init.arguments?.[0]);let value,prop;const definitions=[];
+            const definitions=[];const options=resolveValue(init.arguments?.[0],definitions);let value,prop;
             if(options&&ts.isObjectLiteralExpression(options)&&options.properties.every(p=>ts.isPropertyAssignment(p)&&!ts.isComputedPropertyName(p.name))) {
               const key=technology==='PostgreSQL'?'connectionString':'url';
               prop=options.properties.filter(p=>p.name.text===key).at(-1);
               // Other connection fields may override the URL; not modeled here.
-              if(prop&&!options.properties.some(p=>['host','port','database','socket'].includes(p.name.text)))value=literal(prop.initializer,0,definitions);
+              if(prop&&!options.properties.some(p=>['host','port','database','socket'].includes(p.name.text)))value=literal(resolveValue.property(init.arguments?.[0],key,definitions),0,definitions);
             }
             let resource;
             if(value)try {
@@ -52,11 +52,12 @@ module.exports=function({ts,sources,entities,edges,entity,edge,ev,rel,owner,comp
               if(allowed.includes(url.protocol)&&url.hostname) {
                 const endpoint=url.protocol+'//'+url.host+url.pathname;
                 resource=entity('storage','client-resource:'+endpoint,technology+' · '+url.hostname,{technology,identity:'Source-configured destination; not verified deployment',
-                  application_id:owner(r).id,evidence_ids:[ev(sf,prop,'client-resource-url')]});
+                  application_id:owner(r).id,evidence_ids:[ev(prop.getSourceFile(),prop,'client-resource-url')]});
               }
             }catch{}
             clients.set(s,{resource,technology,evidence:[ev(sf,init,'resource-client-construction'),...imported.evidence,
               ...definitions.map(d=>ev(d.getSourceFile(),d,'resource-value-definition'))]});
+            clients.set(init,clients.get(s));
           }
         }
       }
@@ -76,7 +77,10 @@ module.exports=function({ts,sources,entities,edges,entity,edge,ev,rel,owner,comp
     function operations(n) {
       if(ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)) {
         const receiver=unwrap(n.expression.expression),operation=n.expression.name.text,support=ev(sf,n,'resource-operation'),caller=enclosing(n);
-        const client=ts.isIdentifier(receiver)?clients.get(symbol(receiver)):null;
+        const definitions=[],value=resolveValue(receiver,definitions);
+        const found=ts.isIdentifier(receiver)&&!changed.has(symbol(receiver))?clients.get(symbol(receiver)):null;
+        const base=found||clients.get(value);
+        const client=base?{...base,evidence:[...base.evidence,...definitions.map(d=>ev(d.getSourceFile(),d,'resource-client-summary'))]}:null;
         if(client&&(client.technology==='PostgreSQL'?operation==='query':['get','set','del','mGet','mSet','hGet','hSet','incr','expire','publish','subscribe'].includes(operation))) {
           if(client.resource)edge(caller,client.resource,'USES_RESOURCE',[support,...client.evidence],{callsite:support,resolution:'conditional',operation,
             derivation:'Bound client construction and source-configured destination; invocation/delivery not established'});

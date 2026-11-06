@@ -41,6 +41,7 @@ export function overviewPresentation(view: View): View {
 
 export const relationLabels: Record<string, string> = {
   CALLS: "Function call",
+  MAY_INVOKE_CALLBACK: "Possible callback invocation",
   CONSTRUCTS: "Constructor call",
   HANDLED_BY: "Route handler",
   MODULE_REFERENCE: "Uses module",

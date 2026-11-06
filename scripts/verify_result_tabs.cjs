@@ -20,7 +20,7 @@ const sid=JSON.parse(fs.readFileSync(process.env.SNAPSHOT_SUMMARY||'output/resou
   assert.equal(await page.locator('.evidence-panel').count(),0);
   assert.ok(await page.locator('.react-flow__node').count()<=18);
   assert.equal(await page.locator('.node-kind').filter({hasText:/^FUNCTION$|^METHOD$|^CLASS$/}).count(),0);
-  assert.ok(await page.locator('.node-kind').filter({hasText:'DERIVED RESPONSIBILITY'}).count()>0);
+  assert.ok(await page.locator('.node-kind').filter({hasText:/DERIVED RESPONSIBILITY|ENTRY-POINT CAPABILITY/}).count()>0);
   const canonical=JSON.parse(fs.readFileSync(process.env.CANONICAL_GRAPH||'output/resource-responsibilities/gitdiagram-analysis.json','utf8'));
   const nodeIds=new Set(canonical.entities.map(n=>n.id)),edgeIds=new Set(canonical.edges.map(e=>e.id));
   for(const id of await page.locator('.react-flow__node').evaluateAll(nodes=>nodes.map(n=>n.dataset.id)))assert.ok(nodeIds.has(id),'Invented overview node');
@@ -31,12 +31,24 @@ const sid=JSON.parse(fs.readFileSync(process.env.SNAPSHOT_SUMMARY||'output/resou
   await page.locator('.citation').first().waitFor();
   await page.getByRole('button',{name:'Close inspector',exact:true}).click();
   await page.locator('.http-destinations > summary').click();
-  await page.locator('.node-label').filter({hasText:'API handling'}).first().click();
+  await page.locator('.node-label').filter({hasText:/API handling|Requests: \/api\/generate/}).first().click();
   await page.getByRole('complementary',{name:'Evidence inspector'}).waitFor();
   await page.locator('.citation').first().waitFor();
   await page.getByRole('button',{name:'Close inspector',exact:true}).click();
+  if(canonical.capability_architecture){
+    const capability=canonical.entities.find(n=>n.label==='Requests: /api/generate');
+    const edge=canonical.edges.find(e=>e.source===capability.id&&e.kind==='USES_RESOURCE'&&e.derivation_version==='capability-1');
+    assert.ok(edge,'Generation capability must expose a supported resource path');
+    await page.locator('[data-testid="rf__edge-'+edge.id+'"]').locator('.react-flow__edge-interaction').dispatchEvent('click');
+    await page.getByText('Value-flow derivation',{exact:true}).click();
+    await page.getByRole('button',{name:'Load value-flow steps',exact:true}).click();
+    await page.getByText(/Value-flow dependencies, not runtime order/).waitFor();
+    if(await page.getByRole('button',{name:/More flow steps/}).count())await page.getByRole('button',{name:/More flow steps/}).click();
+    await page.screenshot({path:path.join(out,'flow-evidence.png'),fullPage:true});
+    await page.getByRole('button',{name:'Close inspector',exact:true}).click();
+  }
   await page.getByRole('button',{name:'Workflows',exact:true}).click();
-  await page.getByLabel('Workflow component').selectOption({label:'Client-side requests · gitdiagram'});
+  await page.getByLabel('Workflow component').selectOption({label:canonical.capability_architecture?'Requests: /api/generate':'Client-side requests · gitdiagram'});
   await page.locator('.react-flow__node').first().waitFor();
   await page.locator('.node-kind').filter({hasText:/FUNCTION|METHOD/}).first().waitFor();
   assert.equal(await page.locator('.hierarchy-explorer').count(),0);
@@ -53,7 +65,7 @@ const sid=JSON.parse(fs.readFileSync(process.env.SNAPSHOT_SUMMARY||'output/resou
   await page.getByRole('button',{name:'Diagnostics',exact:true}).click();
   await page.getByRole('heading',{name:'Analysis details',exact:true}).waitFor();
   await page.getByRole('button',{name:'Architecture overview',exact:true}).click();
-  await page.locator('.node-kind').filter({hasText:'DERIVED RESPONSIBILITY'}).first().waitFor();
+  await page.locator('.node-kind').filter({hasText:/DERIVED RESPONSIBILITY|ENTRY-POINT CAPABILITY/}).first().waitFor();
   assert.equal(await page.locator('.hierarchy-explorer').count(),0);
   await page.reload();
   await page.getByRole('heading',{name:'Overall architecture',exact:true}).waitFor();
